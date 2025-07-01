@@ -2,7 +2,7 @@
   "name": "selectz",
   "private": true,
   "version": "0.1.0",
-  "homepage": "https://Selectzbusiness.github.io/Selectz",
+  "homepage": "https://Selectzbusiness.github.io/SelectzB",
   "type": "module",
   "scripts": {
     "start": "react-scripts start",

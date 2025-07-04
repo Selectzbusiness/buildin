@@ -18,6 +18,7 @@ import {
 } from 'react-icons/fa';
 import MessagingSystem from '../../components/MessagingSystem';
 import Modal from '../../components/Modal';
+import useIsMobile from '../../hooks/useIsMobile';
 
 // Define types for data structures
 interface Applicant {
@@ -64,6 +65,7 @@ const Applications: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [messageTargetId, setMessageTargetId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchAllApplications = async () => {
@@ -288,13 +290,191 @@ const Applications: React.FC = () => {
     );
   }
   
+  // --- MOBILE UI ---
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-[#f1f5f9] pb-20">
+        {/* Stats summary */}
+        <div className="flex gap-2 overflow-x-auto px-2 py-3">
+          <div className="flex flex-col items-center bg-white rounded-xl px-3 py-2 min-w-[80px] shadow text-[#185a9d]">
+            <span className="text-xs font-medium">Total</span>
+            <span className="text-lg font-bold">{stats.total}</span>
+          </div>
+          <div className="flex flex-col items-center bg-yellow-50 rounded-xl px-3 py-2 min-w-[80px] shadow text-yellow-700">
+            <span className="text-xs font-medium">Pending</span>
+            <span className="text-lg font-bold">{stats.pending}</span>
+          </div>
+          <div className="flex flex-col items-center bg-gray-50 rounded-xl px-3 py-2 min-w-[80px] shadow text-gray-800">
+            <span className="text-xs font-medium">Reviewed</span>
+            <span className="text-lg font-bold">{stats.reviewed}</span>
+          </div>
+          <div className="flex flex-col items-center bg-green-50 rounded-xl px-3 py-2 min-w-[80px] shadow text-green-700">
+            <span className="text-xs font-medium">Shortlisted</span>
+            <span className="text-lg font-bold">{stats.shortlisted}</span>
+          </div>
+          <div className="flex flex-col items-center bg-red-50 rounded-xl px-3 py-2 min-w-[80px] shadow text-red-700">
+            <span className="text-xs font-medium">Rejected</span>
+            <span className="text-lg font-bold">{stats.rejected}</span>
+          </div>
+        </div>
+        {/* Tabs */}
+        <div className="flex w-full px-2 gap-2 mt-2">
+          <button
+            className={`flex-1 py-2 rounded-lg font-semibold text-xs ${activeTab === 'jobs' ? 'bg-[#185a9d] text-white shadow' : 'bg-white text-[#185a9d] border border-[#185a9d]'}`}
+            onClick={() => setActiveTab('jobs')}
+          >
+            Jobs ({applications.length})
+          </button>
+          <button
+            className={`flex-1 py-2 rounded-lg font-semibold text-xs ${activeTab === 'internships' ? 'bg-[#185a9d] text-white shadow' : 'bg-white text-[#185a9d] border border-[#185a9d]'}`}
+            onClick={() => setActiveTab('internships')}
+          >
+            Internships ({internshipApplications.length})
+          </button>
+        </div>
+        {/* Filters/Search */}
+        <div className="flex gap-2 px-2 mt-3 mb-2">
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="flex-1 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm"
+          />
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="px-2 py-2 rounded-lg border border-gray-200 bg-white text-sm"
+          >
+            <option value="all">All</option>
+            <option value="pending">Pending</option>
+            <option value="reviewed">Reviewed</option>
+            <option value="shortlisted">Shortlisted</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        {/* Applications List */}
+        <div className="flex flex-col gap-3 px-2 mt-2">
+          {activeTab === 'jobs' && (
+            filteredApplications.length === 0 ? (
+              <div className="bg-white rounded-xl p-8 text-center text-gray-400 shadow">No job applications found</div>
+            ) : (
+              filteredApplications.map(application => (
+                <div key={application.id} className="bg-white rounded-xl shadow p-4 flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                    <img
+                      className="w-12 h-12 rounded-full object-cover border"
+                      src={application.user?.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTI0IDI4QzMwLjYyNzQgMjggMzYgMjIuNjI3NCAzNiAxNkMzNiA5LjM3MjU4IDMwLjYyNzQgNCAyNCA0QzE3LjM3MjYgNCAxMiA5LjM3MjU4IDEyIDE2QzEyIDIyLjYyNzQgMTcuMzcyNiAyOCAyNCAyOFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMyQzE2LjI2ODkgMzIgMTAgMzguMjY4OSAxMCA0NkgyNEMzMS43MzExIDQ2IDM4IDM5LjczMTEgMzggMzJIMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='}
+                      alt={application.user?.full_name || 'Applicant'}
+                    />
+                    <div className="flex-1">
+                      <div className="font-bold text-gray-900 text-base">{application.user?.full_name || 'N/A'}</div>
+                      <div className="text-xs text-gray-500">{application.job?.title || 'N/A'}</div>
+                      <div className="text-xs text-gray-400">{new Date(application.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(application.status)}`}>{application.status}</span>
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    <select
+                      value={application.status}
+                      onChange={e => handleStatusChange(application.id, e.target.value)}
+                      className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="reviewed">Reviewed</option>
+                      <option value="shortlisted">Shortlisted</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                    <button
+                      className="flex-1 py-2 rounded-lg bg-[#185a9d] text-white text-xs font-semibold shadow"
+                      onClick={() => { setMessageTargetId(application.user?.auth_id || null); setIsMessageModalOpen(true); }}
+                    >
+                      Message
+                    </button>
+                    <Link
+                      to={`/employer/job-seeker-profile/${application.user?.id}`}
+                      className="flex-1 py-2 rounded-lg bg-gray-100 text-[#185a9d] text-xs font-semibold text-center shadow"
+                    >
+                      View Profile
+                    </Link>
+                  </div>
+                </div>
+              ))
+            )
+          )}
+          {activeTab === 'internships' && (
+            filteredInternshipApplications.length === 0 ? (
+              <div className="bg-white rounded-xl p-8 text-center text-gray-400 shadow">No internship applications found</div>
+            ) : (
+              filteredInternshipApplications.map(application => (
+                <div key={application.id} className="bg-white rounded-xl shadow p-4 flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                    <img
+                      className="w-12 h-12 rounded-full object-cover border"
+                      src={application.user?.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTI0IDI4QzMwLjYyNzQgMjggMzYgMjIuNjI3NCAzNiAxNkMzNiA5LjM3MjU4IDMwLjYyNzQgNCAyNCA0QzE3LjM3MjYgNCAxMiA5LjM3MjU4IDEyIDE2QzEyIDIyLjYyNzQgMTcuMzcyNiAyOCAyNCAyOFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMyQzE2LjI2ODkgMzIgMTAgMzguMjY4OSAxMCA0NkgyNEMzMS43MzExIDQ2IDM4IDM5LjczMTEgMzggMzJIMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='}
+                      alt={application.user?.full_name || 'Applicant'}
+                    />
+                    <div className="flex-1">
+                      <div className="font-bold text-gray-900 text-base">{application.user?.full_name || 'N/A'}</div>
+                      <div className="text-xs text-gray-500">{application.internship?.title || 'N/A'}</div>
+                      <div className="text-xs text-gray-400">{new Date(application.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(application.status)}`}>{application.status}</span>
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    <select
+                      value={application.status}
+                      onChange={e => handleInternshipStatusChange(application.id, e.target.value)}
+                      className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="reviewed">Reviewed</option>
+                      <option value="shortlisted">Shortlisted</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                    <button
+                      className="flex-1 py-2 rounded-lg bg-[#185a9d] text-white text-xs font-semibold shadow"
+                      onClick={() => { setMessageTargetId(application.user?.auth_id || null); setIsMessageModalOpen(true); }}
+                    >
+                      Message
+                    </button>
+                    <Link
+                      to={`/employer/job-seeker-profile/${application.user?.id}`}
+                      className="flex-1 py-2 rounded-lg bg-gray-100 text-[#185a9d] text-xs font-semibold text-center shadow"
+                    >
+                      View Profile
+                    </Link>
+                  </div>
+                </div>
+              ))
+            )
+          )}
+        </div>
+        {/* Message Modal */}
+        {isMessageModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 animate-fade-in">
+            <div className="relative w-full max-w-lg p-2">
+              {messageTargetId ? (
+                <MessagingSystem
+                  initialTargetId={messageTargetId}
+                  onClose={() => setIsMessageModalOpen(false)}
+                  currentRole="employer"
+                />
+              ) : null}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f1f5f9] via-[#e3f0fa] to-[#f4f8fb]">
       <div className="p-8 space-y-8">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold text-[#185a9d] mb-2">Applications</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Applications</h1>
             <p className="text-gray-600">Manage and review all job and internship applications</p>
           </div>
           <div className="flex items-center gap-3">
@@ -332,7 +512,7 @@ const Applications: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500">Reviewed</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.reviewed}</p>
+                <p className="text-2xl font-bold text-gray-800">{stats.reviewed}</p>
               </div>
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                 <FaEye className="w-5 h-5 text-blue-600" />
@@ -435,7 +615,7 @@ const Applications: React.FC = () => {
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <FaBriefcase className="w-8 h-8 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-medium text-[#185a9d] mb-2">No job applications found</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No job applications found</h3>
                   <p className="text-gray-500">Try adjusting your search or filter criteria</p>
                           </div>
               ) : (
@@ -452,7 +632,7 @@ const Applications: React.FC = () => {
                           <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
                             </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-[#185a9d]">{application.user?.full_name || 'N/A'}</h3>
+                          <h3 className="text-lg font-semibold text-gray-900">{application.user?.full_name || 'N/A'}</h3>
                           <p className="text-gray-600">{application.job?.title || 'N/A'}</p>
                           <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
                             <span className="flex items-center space-x-1">
@@ -508,7 +688,7 @@ const Applications: React.FC = () => {
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <FaGraduationCap className="w-8 h-8 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-medium text-[#185a9d] mb-2">No internship applications found</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No internship applications found</h3>
                   <p className="text-gray-500">Try adjusting your search or filter criteria</p>
                           </div>
               ) : (
@@ -525,7 +705,7 @@ const Applications: React.FC = () => {
                           <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
                             </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-[#185a9d]">{application.user?.full_name || 'N/A'}</h3>
+                          <h3 className="text-lg font-semibold text-gray-900">{application.user?.full_name || 'N/A'}</h3>
                           <p className="text-gray-600">{application.internship?.title || 'N/A'}</p>
                           <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
                             <span className="flex items-center space-x-1">

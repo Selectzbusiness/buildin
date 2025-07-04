@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
+import useIsMobile from '../../hooks/useIsMobile';
 
 interface SavedVideo {
   id: string;
@@ -38,6 +39,7 @@ const SavedJobSeekerVideos: React.FC = () => {
   const navigate = useNavigate();
   const [videoRef, videoInView] = useInView({ threshold: 0.5, triggerOnce: false });
   const minSwipeDistance = 50;
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     fetchSavedVideos();
@@ -236,7 +238,7 @@ const SavedJobSeekerVideos: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center"
           >
-            <h1 className="text-4xl font-bold text-[#185a9d] mb-2">💾 Saved Videos</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">�� Saved Videos</h1>
             <p className="text-gray-600 mb-4">{filteredVideos.length} video{filteredVideos.length !== 1 ? 's' : ''} saved</p>
             
             {/* View Mode Toggle */}
@@ -246,8 +248,8 @@ const SavedJobSeekerVideos: React.FC = () => {
                   onClick={() => setViewMode('grid')}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                     viewMode === 'grid'
-                      ? 'bg-[#185a9d] text-white shadow-sm hover:bg-[#43cea2]'
-                      : 'text-gray-600 hover:text-[#185a9d] hover:bg-[#e3f0fa]'
+                      ? 'bg-gray-900 text-white shadow-sm hover:bg-gray-800'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >
                   📋 Grid View
@@ -256,8 +258,8 @@ const SavedJobSeekerVideos: React.FC = () => {
                   onClick={() => setViewMode('reels')}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                     viewMode !== 'grid'
-                      ? 'bg-[#185a9d] text-white shadow-sm hover:bg-[#43cea2]'
-                      : 'text-gray-600 hover:text-[#185a9d] hover:bg-[#e3f0fa]'
+                      ? 'bg-gray-900 text-white shadow-sm hover:bg-gray-800'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >
                   🎬 Reels View
@@ -346,7 +348,7 @@ const SavedJobSeekerVideos: React.FC = () => {
                     📍 {video.desired_location || 'Location not specified'}
                   </p>
                   {video.desired_roles && video.desired_roles.length > 0 && (
-                    <p className="text-sm text-gray-500 mb-3">
+                    <p className="text-sm text-gray-400 mb-3">
                       🎯 {video.desired_roles.join(', ')}
                     </p>
                   )}
@@ -431,7 +433,7 @@ const SavedJobSeekerVideos: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center"
           >
-            <h1 className="text-4xl font-bold text-[#185a9d] mb-2">💾 Saved Videos</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">�� Saved Videos</h1>
             <p className="text-gray-600">Your collection of favorite job seeker videos</p>
           </motion.div>
         </div>
@@ -495,6 +497,103 @@ const SavedJobSeekerVideos: React.FC = () => {
 
   const currentVideo = filteredVideos[currentIndex];
 
+  // --- MOBILE UI ---
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-[#f1f5f9] pb-20 flex flex-col items-center">
+        <div className="w-full max-w-md mx-auto px-2 pt-4">
+          <h1 className="text-xl font-bold text-gray-900 mb-3 text-center">Saved Videos</h1>
+          {/* Search/Filter Bar */}
+          <form className="flex gap-2 mb-4">
+            <input
+              type="text"
+              placeholder="Role/Designation"
+              value={roleFilter}
+              onChange={e => setRoleFilter(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm"
+            />
+            <input
+              type="text"
+              placeholder="Location"
+              value={locationFilter}
+              onChange={e => setLocationFilter(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm"
+            />
+          </form>
+          {loading ? (
+            <div className="w-full flex justify-center items-center py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#185a9d]"></div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {filteredVideos.length === 0 && (
+                <div className="text-center text-gray-500 py-12">No saved videos yet.</div>
+              )}
+              {filteredVideos.map((video) => (
+                <div key={video.id} className="bg-white rounded-xl border border-[#e3f0fa] shadow p-3 flex flex-col items-center">
+                  <video
+                    src={video.intro_video_url}
+                    poster={video.video_thumbnail_url}
+                    controls
+                    className="rounded-lg w-full max-h-64 bg-black mb-2"
+                    preload="metadata"
+                  />
+                  <div className="w-full flex flex-col items-center mb-2">
+                    <span className="text-gray-800 font-medium text-sm">{video.full_name || video.username || 'Unknown'}</span>
+                    <span className="text-xs text-gray-500">{video.title}</span>
+                    <span className="text-xs text-gray-500">{video.desired_location || 'Not specified'}</span>
+                    {video.desired_roles && video.desired_roles.length > 0 && (
+                      <span className="text-xs text-gray-400">Roles: {video.desired_roles.join(', ')}</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2 w-full">
+                    <button
+                      className="flex-1 py-2 rounded-lg bg-[#185a9d] text-white text-xs font-semibold shadow"
+                      onClick={() => handleViewProfile(video.auth_id)}
+                      disabled={viewingId === video.auth_id}
+                    >
+                      {viewingId === video.auth_id ? 'Processing...' : 'View Profile'}
+                    </button>
+                    <button
+                      className="flex-1 py-2 rounded-lg bg-red-100 text-red-600 text-xs font-semibold shadow"
+                      onClick={() => handleRemoveVideo(video.id, video.auth_id)}
+                      disabled={removingId === video.id}
+                    >
+                      {removingId === video.id ? '...' : 'Remove'}
+                    </button>
+                  </div>
+                  {/* Confirmation Dialog */}
+                  {showConfirm === video.auth_id && (
+                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                      <div className="bg-white rounded-xl shadow-lg p-6 max-w-xs w-full flex flex-col items-center">
+                        <h2 className="text-base font-semibold mb-3 text-gray-900">Use 1 credit to view full profile?</h2>
+                        <p className="text-gray-600 mb-4 text-center text-xs">This action will deduct 1 credit from your balance. Are you sure you want to continue?</p>
+                        <div className="flex gap-2 w-full justify-center">
+                          <button
+                            className="flex-1 py-2 rounded-lg bg-[#185a9d] text-white text-xs font-semibold shadow"
+                            onClick={() => confirmViewProfile(video.auth_id)}
+                          >
+                            Yes
+                          </button>
+                          <button
+                            className="flex-1 py-2 rounded-lg bg-gray-200 text-gray-700 text-xs font-semibold shadow"
+                            onClick={() => setShowConfirm(null)}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="h-screen bg-[#f1f5f9] relative overflow-hidden flex flex-col"
@@ -510,7 +609,7 @@ const SavedJobSeekerVideos: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
-          <h1 className="text-3xl font-bold text-[#185a9d] mb-1">💾 Saved Videos</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">�� Saved Videos</h1>
           <p className="text-sm text-gray-600 mb-3">{filteredVideos.length} video{filteredVideos.length !== 1 ? 's' : ''} saved</p>
           
           {/* View Mode Toggle */}
@@ -520,8 +619,8 @@ const SavedJobSeekerVideos: React.FC = () => {
                 onClick={() => setViewMode('grid')}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                   viewMode === 'grid'
-                    ? 'bg-[#185a9d] text-white shadow-sm'
-                    : 'text-gray-600 hover:text-[#185a9d] hover:bg-[#e3f0fa]'
+                    ? 'bg-gray-900 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
                 📋 Grid
@@ -530,8 +629,8 @@ const SavedJobSeekerVideos: React.FC = () => {
                 onClick={() => setViewMode('reels')}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                   viewMode === 'reels'
-                    ? 'bg-[#185a9d] text-white shadow-sm'
-                    : 'text-gray-600 hover:text-[#185a9d] hover:bg-[#e3f0fa]'
+                    ? 'bg-gray-900 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
                 🎬 Reels

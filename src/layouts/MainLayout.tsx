@@ -2,12 +2,13 @@ import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { supabase } from '../config/supabase';
-import JobSeekerMobileNav from '../components/JobSeekerMobileNav';
 import UploadsModal from '../components/UploadsModal';
 import AdvancedSearch from '../components/AdvancedSearch';
 import NotificationCenter from '../components/NotificationCenter';
 import MessagingSystem from '../components/MessagingSystem';
 import AIAssistant from '../components/AIAssistant';
+import useIsMobile from '../hooks/useIsMobile';
+import MainLayoutMobile from './mobile/MainLayoutMobile';
 
 const MainLayout: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -21,6 +22,7 @@ const MainLayout: React.FC = () => {
   const location = useLocation();
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 640);
   const closeDropdownTimeout = useRef<NodeJS.Timeout | null>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -77,8 +79,17 @@ const MainLayout: React.FC = () => {
     }
   };
 
+  if (isMobile) return <MainLayoutMobile />;
+
   return (
-    <div className="min-h-screen bg-[#f1f5f9]">
+    <div className="min-h-screen bg-[#f1f5f9] flex flex-col">
+      {/* Header with logo for desktop only */}
+      {!isMobile && (
+        <div className="w-full flex items-center pt-6 pb-2 px-8">
+          <img src="/selectz-logo.png" alt="Selectz Logo" className="w-10 h-10 mr-3" style={{objectFit: 'contain'}} />
+          <span className="text-2xl font-extrabold tracking-tight select-none" style={{color: '#185a9d', letterSpacing: '0.01em'}}>Selectz</span>
+        </div>
+      )}
       {/* Navigation - Hidden on mobile */}
       <nav className="bg-white shadow-lg fixed w-full z-20 backdrop-blur-md rounded-b-2xl border-b border-[#e3f0fa] hidden md:block">
         <div className="w-full flex justify-center">
@@ -285,9 +296,6 @@ const MainLayout: React.FC = () => {
 
       {/* Uploads Modal */}
       <UploadsModal isOpen={showUploadsModal} onClose={() => setShowUploadsModal(false)} />
-
-      {/* Mobile Bottom Navigation */}
-      <JobSeekerMobileNav />
 
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 hidden md:block">

@@ -5,6 +5,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../../components/Modal';
 import toast from 'react-hot-toast';
+import useIsMobile from '../../hooks/useIsMobile';
 
 const TABS = [
   { id: 'applied', label: 'Applied Jobs', icon: FiBriefcase },
@@ -44,6 +45,7 @@ const MyJobs: React.FC = () => {
   const [modal, setModal] = useState<{ type: string; data?: any } | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [appliedTab, setAppliedTab] = useState<'jobs' | 'internships'>('jobs');
+  const isMobile = useIsMobile();
 
   console.log('Full profile object:', profile);
 
@@ -128,7 +130,7 @@ const MyJobs: React.FC = () => {
   }, [activeTab, profile?.id, profileLoading]);
 
   // UI for each tab
-  const renderAppliedJobs = () => (
+  const renderAppliedJobs = (mobile: boolean) => (
     <div>
       {/* Sub-tabs for Jobs and Internships */}
       <div className="mb-6 flex space-x-4 justify-center">
@@ -158,19 +160,19 @@ const MyJobs: React.FC = () => {
           {appliedTab === 'jobs' && (
             appliedJobs.length > 0 ? (
               <div>
-                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center"><FiBriefcase className="w-5 h-5 mr-2 text-[#185a9d]" />Job Applications</h3>
+                <h3 className={`text-lg font-bold mb-4 flex items-center ${mobile ? 'text-black' : 'text-gray-800'}`}><FiBriefcase className={`w-5 h-5 mr-2 ${mobile ? 'text-gray-500' : 'text-[#185a9d]'}`} />Job Applications</h3>
                 <div className="space-y-6">
                   {appliedJobs.map((app) => (
-                    <div key={app.id} className="bg-gray-50 rounded-xl shadow p-5 flex flex-col md:flex-row md:items-center md:justify-between hover:shadow-lg transition">
+                    <div key={app.id} className={`rounded-xl shadow p-5 flex flex-col md:flex-row md:items-center md:justify-between hover:shadow-lg transition ${mobile ? 'bg-gray-50' : 'bg-gray-50'}`}>
                       <div className="flex-1">
                         <div className="flex items-center mb-2">
-                          <span className="text-[#185a9d] font-bold text-lg mr-2">{app.jobs?.title}</span>
+                          <span className={`font-bold text-lg mr-2 ${mobile ? 'text-black' : 'text-[#185a9d]'}`}>{app.jobs?.title}</span>
                           <span className="text-gray-500 text-sm">{app.jobs?.companies?.name}</span>
                         </div>
                         <div className="text-gray-500 text-sm mb-1">{renderLocation(app.jobs?.location)}</div>
                         <div className="text-xs text-gray-400">Applied: {new Date(app.applied_at || app.created_at).toLocaleDateString()}</div>
                         <div className="mt-2">
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(app.status)}`}>{app.status.replace('_', ' ')}</span>
+                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${mobile ? 'bg-gray-200 text-gray-700' : getStatusColor(app.status)}`}>{app.status.replace('_', ' ')}</span>
                         </div>
                       </div>
                       <div className="mt-4 md:mt-0 flex flex-col md:items-end space-y-2">
@@ -200,18 +202,18 @@ const MyJobs: React.FC = () => {
           {appliedTab === 'internships' && (
             appliedInternships.length > 0 ? (
               <div>
-                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center"><FiBriefcase className="w-5 h-5 mr-2 text-[#185a9d]" />Internship Applications</h3>
+                <h3 className={`text-lg font-bold mb-4 flex items-center ${mobile ? 'text-black' : 'text-gray-800'}`}><FiBriefcase className={`w-5 h-5 mr-2 ${mobile ? 'text-gray-500' : 'text-[#185a9d]'}`} />Internship Applications</h3>
                 <div className="space-y-6">
                   {appliedInternships.map((app) => (
-                    <div key={app.id} className="bg-blue-50 rounded-xl shadow p-5 flex flex-col md:flex-row md:items-center md:justify-between hover:shadow-lg transition">
+                    <div key={app.id} className={`rounded-xl shadow p-5 flex flex-col md:flex-row md:items-center md:justify-between hover:shadow-lg transition ${mobile ? 'bg-gray-50' : 'bg-gray-50'}`}>
                       <div className="flex-1">
                         <div className="flex items-center mb-2">
-                          <span className="text-[#185a9d] font-bold text-lg mr-2">{app.internships?.title}</span>
+                          <span className={`font-bold text-lg mr-2 ${mobile ? 'text-black' : 'text-[#185a9d]'}`}>{app.internships?.title}</span>
                         </div>
                         <div className="text-gray-500 text-sm mb-1">{renderLocation(app.internships?.location)}</div>
                         <div className="text-xs text-gray-400">Applied: {new Date(app.applied_at || app.created_at).toLocaleDateString()}</div>
                         <div className="mt-2">
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(app.status)}`}>{app.status.replace('_', ' ')}</span>
+                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${mobile ? 'bg-gray-200 text-gray-700' : getStatusColor(app.status)}`}>{app.status.replace('_', ' ')}</span>
                         </div>
                       </div>
                       <div className="mt-4 md:mt-0 flex flex-col md:items-end space-y-2">
@@ -242,7 +244,7 @@ const MyJobs: React.FC = () => {
     </div>
   );
 
-  const renderJobOffers = () => (
+  const renderJobOffers = (mobile: boolean) => (
     <div>
       {loading ? (
         <div className="flex flex-col items-center justify-center h-64 text-emerald-400 animate-pulse">
@@ -296,7 +298,7 @@ const MyJobs: React.FC = () => {
     </div>
   );
 
-  const renderInterviews = () => (
+  const renderInterviews = (mobile: boolean) => (
     <div>
       {loading ? (
         <div className="flex flex-col items-center justify-center h-64 text-emerald-400 animate-pulse">
@@ -342,7 +344,7 @@ const MyJobs: React.FC = () => {
     </div>
   );
 
-  const renderSaved = () => (
+  const renderSaved = (mobile: boolean) => (
     <div>
       {loading ? (
         <div className="flex flex-col items-center justify-center h-64 text-emerald-400 animate-pulse">
@@ -361,13 +363,13 @@ const MyJobs: React.FC = () => {
           {/* Saved Jobs */}
           {savedJobs.length > 0 && (
             <div>
-              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center"><FiBriefcase className="w-5 h-5 mr-2 text-[#185a9d]" />Saved Jobs</h3>
+              <h3 className={`text-lg font-bold mb-4 flex items-center ${mobile ? 'text-black' : 'text-gray-800'}`}><FiBriefcase className={`w-5 h-5 mr-2 ${mobile ? 'text-gray-500' : 'text-[#185a9d]'}`} />Saved Jobs</h3>
               <div className="space-y-6">
                 {savedJobs.map((fav) => (
                   <div key={fav.id} className="bg-gray-50 rounded-xl shadow p-5 flex flex-col md:flex-row md:items-center md:justify-between hover:shadow-lg transition">
                     <div className="flex-1">
                       <div className="flex items-center mb-2">
-                        <span className="text-[#185a9d] font-bold text-lg mr-2">{fav.jobs?.title || 'Job Title'}</span>
+                        <span className={`font-bold text-lg mr-2 ${mobile ? 'text-black' : 'text-[#185a9d]'}`}>{fav.jobs?.title || 'Job Title'}</span>
                         <span className="text-gray-500 text-sm">{fav.jobs?.company || 'Company Name'}</span>
                       </div>
                       <div className="text-gray-500 text-sm mb-1">{renderLocation(fav.jobs?.location)}</div>
@@ -387,13 +389,13 @@ const MyJobs: React.FC = () => {
           {/* Saved Internships */}
           {savedInternships.length > 0 && (
             <div>
-              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center"><FiBriefcase className="w-5 h-5 mr-2 text-[#185a9d]" />Saved Internships</h3>
+              <h3 className={`text-lg font-bold mb-4 flex items-center ${mobile ? 'text-black' : 'text-gray-800'}`}><FiBriefcase className={`w-5 h-5 mr-2 ${mobile ? 'text-gray-500' : 'text-[#185a9d]'}`} />Saved Internships</h3>
               <div className="space-y-6">
                 {savedInternships.map((fav) => (
                   <div key={fav.id} className="bg-blue-50 rounded-xl shadow p-5 flex flex-col md:flex-row md:items-center md:justify-between hover:shadow-lg transition">
                     <div className="flex-1">
                       <div className="flex items-center mb-2">
-                        <span className="text-[#185a9d] font-bold text-lg mr-2">{fav.internships?.title || 'Internship Title'}</span>
+                        <span className={`font-bold text-lg mr-2 ${mobile ? 'text-black' : 'text-[#185a9d]'}`}>{fav.internships?.title || 'Internship Title'}</span>
                         <span className="text-gray-500 text-sm">{fav.internships?.company || 'Company Name'}</span>
                       </div>
                       <div className="text-gray-500 text-sm mb-1">{renderLocation(fav.internships?.location)}</div>
@@ -527,121 +529,166 @@ const MyJobs: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-[#185a9d] mb-2">My Jobs</h1>
-            <p className="text-gray-500">Track your job applications, offers, and interviews in one place.</p>
+    <div className="min-h-screen bg-[#f1f5f9]">
+      {isMobile ? (
+        <>
+          {/* Main Card/Section (mobile padding, rounded, shadow) */}
+          <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-lg p-4 mt-4 mb-8">
+            {/* Header */}
+            <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-2xl font-extrabold text-black mb-2">My Jobs</h1>
+                <p className="text-gray-500">Track your job applications, offers, and interviews in one place.</p>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="mb-8">
+              <nav className="flex space-x-2 bg-white rounded-xl shadow p-2">
+                {TABS.map(tab => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center px-5 py-3 rounded-lg font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400
+                        ${activeTab === tab.id ? 'bg-gray-100 text-black shadow' : 'text-gray-600 hover:bg-gray-50 hover:text-black'}`}
+                    >
+                      <Icon className="w-5 h-5 mr-2 text-gray-500" />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Tab Content */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 min-h-[400px]">
+              {activeTab === 'applied' && renderAppliedJobs(true)}
+              {activeTab === 'offers' && renderJobOffers(true)}
+              {activeTab === 'interviews' && renderInterviews(true)}
+              {activeTab === 'saved' && renderSaved(true)}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-5xl mx-auto">
+            {/* Header */}
+            <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-[#185a9d] mb-2">My Jobs</h1>
+                <p className="text-gray-500">Track your job applications, offers, and interviews in one place.</p>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="mb-8">
+              <nav className="flex space-x-2 bg-white rounded-xl shadow p-2">
+                {TABS.map(tab => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center px-5 py-3 rounded-lg font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#185a9d]
+                        ${activeTab === tab.id ? 'bg-[#e3f0fa] text-[#185a9d] shadow' : 'text-gray-600 hover:bg-[#f1f5f9] hover:text-[#185a9d]'}`}
+                    >
+                      <Icon className="w-5 h-5 mr-2" />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Tab Content */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 min-h-[400px]">
+              {activeTab === 'applied' && renderAppliedJobs(false)}
+              {activeTab === 'offers' && renderJobOffers(false)}
+              {activeTab === 'interviews' && renderInterviews(false)}
+              {activeTab === 'saved' && renderSaved(false)}
+            </div>
+
+            {/* Modal */}
+            {modal && (
+              <Modal
+                isOpen={!!modal}
+                onClose={() => setModal(null)}
+                title={
+                  modal.type === 'withdraw' ? 'Withdraw Application' :
+                  modal.type === 'accept' ? 'Accept Job Offer' :
+                  modal.type === 'decline' ? 'Decline Job Offer' :
+                  modal.type === 'schedule' ? 'Schedule Interview' :
+                  'Confirm Action'
+                }
+                actions={
+                  modal.type === 'withdraw' ? [
+                    <button
+                      key="cancel"
+                      className="px-4 py-2 bg-gray-200 rounded-lg font-semibold mr-2"
+                      onClick={() => setModal(null)}
+                      disabled={modalLoading}
+                    >Cancel</button>,
+                    <button
+                      key="withdraw"
+                      className="px-4 py-2 bg-[#185a9d] text-white rounded-lg font-semibold"
+                      onClick={() => handleWithdraw(modal.data)}
+                      disabled={modalLoading}
+                    >{modalLoading ? 'Withdrawing...' : 'Withdraw'}</button>
+                  ] : modal.type === 'accept' ? [
+                    <button
+                      key="cancel"
+                      className="px-4 py-2 bg-gray-200 rounded-lg font-semibold mr-2"
+                      onClick={() => setModal(null)}
+                      disabled={modalLoading}
+                    >Cancel</button>,
+                    <button
+                      key="accept"
+                      className="px-4 py-2 bg-[#185a9d] text-white rounded-lg font-semibold"
+                      onClick={() => handleAcceptOffer(modal.data)}
+                      disabled={modalLoading}
+                    >{modalLoading ? 'Accepting...' : 'Accept Offer'}</button>
+                  ] : modal.type === 'decline' ? [
+                    <button
+                      key="cancel"
+                      className="px-4 py-2 bg-gray-200 rounded-lg font-semibold mr-2"
+                      onClick={() => setModal(null)}
+                      disabled={modalLoading}
+                    >Cancel</button>,
+                    <button
+                      key="decline"
+                      className="px-4 py-2 bg-[#185a9d] text-white rounded-lg font-semibold"
+                      onClick={() => handleDeclineOffer(modal.data)}
+                      disabled={modalLoading}
+                    >{modalLoading ? 'Declining...' : 'Decline'}</button>
+                  ] : modal.type === 'schedule' ? (
+                    <ScheduleInterviewForm
+                      interview={modal.data}
+                      onSubmit={handleScheduleInterview}
+                      onCancel={() => setModal(null)}
+                      loading={modalLoading}
+                    />
+                  ) : null
+                }
+              >
+                {modal.type === 'withdraw' && (
+                  <span>Are you sure you want to withdraw your application for <b>{modal.data?.jobs?.title || modal.data?.internships?.title}</b> at <b>{modal.data?.jobs?.companies?.name || modal.data?.internships?.company}</b>?</span>
+                )}
+                {modal.type === 'accept' && (
+                  <span>Are you sure you want to <b>accept</b> the offer for <b>{modal.data?.title}</b> at <b>{modal.data?.company_name}</b>?</span>
+                )}
+                {modal.type === 'decline' && (
+                  <span>Are you sure you want to <b>decline</b> the offer for <b>{modal.data?.title}</b> at <b>{modal.data?.company_name}</b>?</span>
+                )}
+                {modal.type === 'schedule' && (
+                  <span>Schedule your interview for <b>{modal.data?.job_offers?.title || modal.data?.applications?.jobs?.title}</b>.</span>
+                )}
+              </Modal>
+            )}
           </div>
         </div>
-
-        {/* Tabs */}
-        <div className="mb-8">
-          <nav className="flex space-x-2 bg-white rounded-xl shadow p-2">
-            {TABS.map(tab => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center px-5 py-3 rounded-lg font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#185a9d]
-                    ${activeTab === tab.id ? 'bg-[#e3f0fa] text-[#185a9d] shadow' : 'text-gray-600 hover:bg-[#f1f5f9] hover:text-[#185a9d]'}`}
-                >
-                  <Icon className="w-5 h-5 mr-2" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Tab Content */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 min-h-[400px]">
-          {activeTab === 'applied' && renderAppliedJobs()}
-          {activeTab === 'offers' && renderJobOffers()}
-          {activeTab === 'interviews' && renderInterviews()}
-          {activeTab === 'saved' && renderSaved()}
-        </div>
-
-        {/* Modal */}
-        {modal && (
-          <Modal
-            isOpen={!!modal}
-            onClose={() => setModal(null)}
-            title={
-              modal.type === 'withdraw' ? 'Withdraw Application' :
-              modal.type === 'accept' ? 'Accept Job Offer' :
-              modal.type === 'decline' ? 'Decline Job Offer' :
-              modal.type === 'schedule' ? 'Schedule Interview' :
-              'Confirm Action'
-            }
-            actions={
-              modal.type === 'withdraw' ? [
-                <button
-                  key="cancel"
-                  className="px-4 py-2 bg-gray-200 rounded-lg font-semibold mr-2"
-                  onClick={() => setModal(null)}
-                  disabled={modalLoading}
-                >Cancel</button>,
-                <button
-                  key="withdraw"
-                  className="px-4 py-2 bg-[#c62828] text-white rounded-lg font-semibold"
-                  onClick={() => handleWithdraw(modal.data)}
-                  disabled={modalLoading}
-                >{modalLoading ? 'Withdrawing...' : 'Withdraw'}</button>
-              ] : modal.type === 'accept' ? [
-                <button
-                  key="cancel"
-                  className="px-4 py-2 bg-gray-200 rounded-lg font-semibold mr-2"
-                  onClick={() => setModal(null)}
-                  disabled={modalLoading}
-                >Cancel</button>,
-                <button
-                  key="accept"
-                  className="px-4 py-2 bg-[#185a9d] text-white rounded-lg font-semibold"
-                  onClick={() => handleAcceptOffer(modal.data)}
-                  disabled={modalLoading}
-                >{modalLoading ? 'Accepting...' : 'Accept Offer'}</button>
-              ] : modal.type === 'decline' ? [
-                <button
-                  key="cancel"
-                  className="px-4 py-2 bg-gray-200 rounded-lg font-semibold mr-2"
-                  onClick={() => setModal(null)}
-                  disabled={modalLoading}
-                >Cancel</button>,
-                <button
-                  key="decline"
-                  className="px-4 py-2 bg-[#c62828] text-white rounded-lg font-semibold"
-                  onClick={() => handleDeclineOffer(modal.data)}
-                  disabled={modalLoading}
-                >{modalLoading ? 'Declining...' : 'Decline'}</button>
-              ] : modal.type === 'schedule' ? (
-                <ScheduleInterviewForm
-                  interview={modal.data}
-                  onSubmit={handleScheduleInterview}
-                  onCancel={() => setModal(null)}
-                  loading={modalLoading}
-                />
-              ) : null
-            }
-          >
-            {modal.type === 'withdraw' && (
-              <span>Are you sure you want to withdraw your application for <b>{modal.data?.jobs?.title || modal.data?.internships?.title}</b> at <b>{modal.data?.jobs?.companies?.name || modal.data?.internships?.company}</b>?</span>
-            )}
-            {modal.type === 'accept' && (
-              <span>Are you sure you want to <b>accept</b> the offer for <b>{modal.data?.title}</b> at <b>{modal.data?.company_name}</b>?</span>
-            )}
-            {modal.type === 'decline' && (
-              <span>Are you sure you want to <b>decline</b> the offer for <b>{modal.data?.title}</b> at <b>{modal.data?.company_name}</b>?</span>
-            )}
-            {modal.type === 'schedule' && (
-              <span>Schedule your interview for <b>{modal.data?.job_offers?.title || modal.data?.applications?.jobs?.title}</b>.</span>
-            )}
-          </Modal>
-        )}
-      </div>
+      )}
     </div>
   );
 };

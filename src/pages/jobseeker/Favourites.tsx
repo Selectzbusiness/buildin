@@ -4,6 +4,9 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { FiBookmark, FiBriefcase, FiBookOpen, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import useIsMobile from '../../hooks/useIsMobile';
+import JobCardNew from '../../components/JobCardNew';
+import { InternshipCard } from '../../components/InternshipCard';
 
 const TABS = [
   { id: 'jobs', label: 'Saved Jobs', icon: FiBriefcase },
@@ -284,13 +287,14 @@ export const useFavoritesManagement = () => {
 
 const Favourites: React.FC = () => {
   const { profile } = useContext(AuthContext);
-  const [activeTab, setActiveTab] = useState('jobs');
+  const [activeTab, setActiveTab] = useState<'jobs' | 'internships'>('jobs');
   const [savedJobs, setSavedJobs] = useState<any[]>([]);
   const [savedInternships, setSavedInternships] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unsavingId, setUnsavingId] = useState<string | null>(null);
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const fetchFavorites = async () => {
     if (!profile) return;
@@ -377,96 +381,187 @@ const Favourites: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] py-10">
-      <div className="max-w-5xl mx-auto px-4">
-        <h1 className="text-3xl font-bold text-[#185a9d] mb-8 flex items-center gap-2"><FiBookmark /> Favourites</h1>
-        <div className="mb-6 flex gap-2 border-b border-[#e3f0fa]">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                className={`px-4 py-2 font-semibold rounded-t-lg flex items-center gap-2 transition-all duration-200 ${activeTab === tab.id ? 'bg-white text-[#185a9d] border-b-2 border-[#185a9d]' : 'text-gray-500 hover:text-[#185a9d] bg-transparent'}`}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                <Icon /> {tab.label}
-              </button>
-            );
-          })}
+    isMobile ? (
+      <div className="min-h-screen bg-white pb-4">
+        <div className="sticky top-0 z-10 bg-white px-4 pt-4 pb-2 border-b border-[#e3f0fa]">
+          <h1 className="text-xl font-bold text-[#185a9d] mb-2 flex items-center gap-2"><FiBookmark /> Favourites</h1>
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  className={`flex-1 px-3 py-2 rounded-full font-semibold flex items-center justify-center gap-2 transition-all duration-200 text-sm whitespace-nowrap ${activeTab === tab.id ? 'bg-[#185a9d] text-white shadow' : 'bg-[#f1f5f9] text-gray-700 hover:bg-[#e3f0fa]'}`}
+                  onClick={() => setActiveTab(tab.id as 'jobs' | 'internships')}
+                >
+                  <Icon /> {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
-        {loading ? (
-          <div className="text-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#185a9d] mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading your favorites...</p>
-          </div>
-        ) : error ? (
-          <div className="text-center text-red-600 py-16">{error}</div>
-        ) : (
-          <div>
-            {activeTab === 'jobs' && (
-              <div>
-                {savedJobs.length === 0 ? (
-                  <div className="text-center py-16 text-gray-500">No saved jobs yet.</div>
-                ) : (
-                  <div className="space-y-4">
-                    {savedJobs.map((fav) => (
-                      <div key={fav.id} className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 flex justify-between items-center">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-[#185a9d] cursor-pointer hover:underline" onClick={() => navigate(`/jobs/${fav.job_id}`)}>{fav.jobs?.title || 'Job Title'}</h3>
-                          <div className="text-gray-500 text-sm mb-1">{fav.jobs?.company || 'Company Name'} • {renderLocation(fav.jobs?.location)}</div>
-                          <div className="text-xs text-gray-400">Posted: {fav.jobs?.created_at ? new Date(fav.jobs.created_at).toLocaleDateString() : 'Recently'}</div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="px-3 py-1 rounded-full text-sm font-medium bg-[#e3f0fa] text-[#185a9d]">{fav.jobs?.job_type || 'Job'}</span>
-                          <button
-                            onClick={() => handleUnsaveJob(fav.job_id)}
-                            disabled={unsavingId === fav.job_id}
-                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors duration-200"
-                            aria-label="Remove from favorites"
-                          >
-                            <FiX className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            {activeTab === 'internships' && (
-              <div>
-                {savedInternships.length === 0 ? (
-                  <div className="text-center py-16 text-gray-500">No saved internships yet.</div>
-                ) : (
-                  <div className="space-y-4">
-                    {savedInternships.map((fav) => (
-                      <div key={fav.id} className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 flex justify-between items-center">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-[#185a9d] cursor-pointer hover:underline" onClick={() => navigate(`/internships/${fav.internship_id}`)}>{fav.internships?.title || 'Internship Title'}</h3>
-                          <div className="text-gray-500 text-sm mb-1">{fav.internships?.company || 'Company Name'} • {renderLocation(fav.internships?.location)}</div>
-                          <div className="text-xs text-gray-400">Posted: {fav.internships?.created_at ? new Date(fav.internships.created_at).toLocaleDateString() : 'Recently'}</div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="px-3 py-1 rounded-full text-sm font-medium bg-[#e3f0fa] text-[#185a9d]">{fav.internships?.internship_type || 'Internship'}</span>
-                          <button
-                            onClick={() => handleUnsaveInternship(fav.internship_id)}
-                            disabled={unsavingId === fav.internship_id}
-                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors duration-200"
-                            aria-label="Remove from favorites"
-                          >
-                            <FiX className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        <div className="px-2 pt-2">
+          {loading ? (
+            <div className="text-center py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#185a9d] mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading your favorites...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-600 py-16">{error}</div>
+          ) : (
+            <div>
+              {activeTab === 'jobs' && (
+                <div>
+                  {savedJobs.length === 0 ? (
+                    <div className="text-center py-16 text-gray-400 text-base">No saved jobs yet.</div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      {savedJobs.map((fav) => (
+                        <JobCardNew key={fav.id} job={{
+                          id: fav.job_id,
+                          title: fav.jobs?.title || 'Job Title',
+                          company: fav.jobs?.company || 'Company Name',
+                          location: fav.jobs?.location,
+                          type: fav.jobs?.job_type || 'Job',
+                          salary: fav.jobs?.salary || '',
+                          description: fav.jobs?.description || '',
+                          postedDate: fav.jobs?.created_at || '',
+                          requirements: fav.jobs?.requirements || [],
+                          status: fav.jobs?.status || 'active',
+                          experience: fav.jobs?.experience || '',
+                          companies: fav.jobs?.companies,
+                          companyLogo: fav.jobs?.companyLogo,
+                          skills: fav.jobs?.skills || [],
+                        }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {activeTab === 'internships' && (
+                <div>
+                  {savedInternships.length === 0 ? (
+                    <div className="text-center py-16 text-gray-400 text-base">No saved internships yet.</div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      {savedInternships.map((fav) => (
+                        <InternshipCard key={fav.id} internship={{
+                          id: fav.internship_id,
+                          title: fav.internships?.title || 'Internship Title',
+                          description: fav.internships?.description || '',
+                          internship_type: fav.internships?.internship_type || 'Internship',
+                          location: fav.internships?.location,
+                          stipend_type: fav.internships?.stipend_type || '',
+                          min_amount: fav.internships?.min_amount || 0,
+                          max_amount: fav.internships?.max_amount || 0,
+                          amount: fav.internships?.amount || 0,
+                          pay_rate: fav.internships?.pay_rate || '',
+                          duration: fav.internships?.duration || '',
+                          company: fav.internships?.company || 'Company Name',
+                          companyLogo: fav.internships?.companyLogo,
+                          skills: fav.internships?.skills || [],
+                        }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    ) : (
+      <div className="min-h-screen bg-[#f1f5f9] py-10">
+        <div className="max-w-5xl mx-auto px-4">
+          <h1 className="text-3xl font-bold text-[#185a9d] mb-8 flex items-center gap-2"><FiBookmark /> Favourites</h1>
+          <div className="mb-6 flex gap-2 border-b border-[#e3f0fa]">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  className={`px-4 py-2 font-semibold rounded-t-lg flex items-center gap-2 transition-all duration-200 ${activeTab === tab.id ? 'bg-white text-[#185a9d] border-b-2 border-[#185a9d]' : 'text-gray-500 hover:text-[#185a9d] bg-transparent'}`}
+                  onClick={() => setActiveTab(tab.id as 'jobs' | 'internships')}
+                >
+                  <Icon /> {tab.label}
+                </button>
+              );
+            })}
+          </div>
+          {loading ? (
+            <div className="text-center py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#185a9d] mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading your favorites...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-600 py-16">{error}</div>
+          ) : (
+            <div>
+              {activeTab === 'jobs' && (
+                <div>
+                  {savedJobs.length === 0 ? (
+                    <div className="text-center py-16 text-gray-500">No saved jobs yet.</div>
+                  ) : (
+                    <div className="space-y-4">
+                      {savedJobs.map((fav) => (
+                        <div key={fav.id} className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 flex justify-between items-center">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-[#185a9d] cursor-pointer hover:underline" onClick={() => navigate(`/jobs/${fav.job_id}`)}>{fav.jobs?.title || 'Job Title'}</h3>
+                            <div className="text-gray-500 text-sm mb-1">{fav.jobs?.company || 'Company Name'} • {renderLocation(fav.jobs?.location)}</div>
+                            <div className="text-xs text-gray-400">Posted: {fav.jobs?.created_at ? new Date(fav.jobs.created_at).toLocaleDateString() : 'Recently'}</div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="px-3 py-1 rounded-full text-sm font-medium bg-[#e3f0fa] text-[#185a9d]">{fav.jobs?.job_type || 'Job'}</span>
+                            <button
+                              onClick={() => handleUnsaveJob(fav.job_id)}
+                              disabled={unsavingId === fav.job_id}
+                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors duration-200"
+                              aria-label="Remove from favorites"
+                            >
+                              <FiX className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {activeTab === 'internships' && (
+                <div>
+                  {savedInternships.length === 0 ? (
+                    <div className="text-center py-16 text-gray-500">No saved internships yet.</div>
+                  ) : (
+                    <div className="space-y-4">
+                      {savedInternships.map((fav) => (
+                        <div key={fav.id} className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 flex justify-between items-center">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-[#185a9d] cursor-pointer hover:underline" onClick={() => navigate(`/internships/${fav.internship_id}`)}>{fav.internships?.title || 'Internship Title'}</h3>
+                            <div className="text-gray-500 text-sm mb-1">{fav.internships?.company || 'Company Name'} • {renderLocation(fav.internships?.location)}</div>
+                            <div className="text-xs text-gray-400">Posted: {fav.internships?.created_at ? new Date(fav.internships.created_at).toLocaleDateString() : 'Recently'}</div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="px-3 py-1 rounded-full text-sm font-medium bg-[#e3f0fa] text-[#185a9d]">{fav.internships?.internship_type || 'Internship'}</span>
+                            <button
+                              onClick={() => handleUnsaveInternship(fav.internship_id)}
+                              disabled={unsavingId === fav.internship_id}
+                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors duration-200"
+                              aria-label="Remove from favorites"
+                            >
+                              <FiX className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    )
   );
 };
 

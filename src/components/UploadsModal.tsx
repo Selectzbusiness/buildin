@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useContext } from 'react';
 import { supabase } from '../config/supabase';
 import { AuthContext } from '../contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
+import useIsMobile from '../hooks/useIsMobile';
+import { FiUpload, FiCamera } from 'react-icons/fi';
 
 // Video validation constants
 const MAX_VIDEO_DURATION = 60; // 60 seconds
@@ -19,6 +21,7 @@ type ResumeState = 'initial' | 'uploaded' | 'saved';
 
 const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
   const { user } = useContext(AuthContext);
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<'videos' | 'resumes'>('videos');
   
   // Video states
@@ -974,44 +977,65 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
                           className="hidden"
                           aria-label="Upload video file"
                         />
-                        <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-300 group-hover:scale-[1.02]">
-                          <div className="space-y-4">
-                            <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                              </svg>
-                            </div>
-                            <div>
-                              <p className="text-lg font-semibold text-gray-900">Upload Existing Video</p>
-                              <p className="text-gray-500 mt-1">Select a video file from your device</p>
-                            </div>
+                  {isMobile ? (
+                          <div className="flex flex-row items-center justify-center gap-8 py-12 max-[400px]:flex-col bg-white/60 backdrop-blur-md rounded-3xl shadow-2xl mx-2">
+                      {/* Upload Video */}
+                            <label className="flex flex-col items-center cursor-pointer group flex-1">
+                        <input
+                          type="file"
+                          accept="video/*"
+                          onChange={handleVideoFileChange}
+                          className="hidden"
+                          aria-label="Upload video file"
+                        />
+                              <div className="relative">
+                                <div className="bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 p-2 rounded-full shadow-2xl group-active:scale-95 group-hover:scale-105 transition-transform duration-200">
+                                  <div className="bg-white/80 backdrop-blur-lg rounded-full p-10 flex items-center justify-center shadow-lg">
+                                    <FiUpload className="w-16 h-16 text-pink-500 group-hover:scale-110 transition-transform duration-200" style={{ filter: 'drop-shadow(0 4px 16px rgba(236, 72, 153, 0.5))' }} />
                           </div>
                         </div>
+                                <div className="absolute inset-0 rounded-full pointer-events-none animate-pulse bg-gradient-to-tr from-yellow-400/20 via-pink-500/20 to-purple-600/20 blur-lg opacity-60" />
+                              </div>
+                              <span className="mt-7 text-xl font-extrabold text-gray-900 tracking-tight drop-shadow-md">Upload Video</span>
+                              <span className="mt-3 text-base text-gray-500 font-medium drop-shadow-sm">MP4, WebM, OGG, MOV</span>
                       </label>
-                    </div>
-
-                    <div className="group relative">
+                      {/* Record New Video */}
                       <button
                         onClick={startRecording}
-                        className="w-full h-full"
-                        aria-label="Start recording video"
+                              className="flex flex-col items-center group flex-1 focus:outline-none"
+                        aria-label="Record new video"
+                        type="button"
                       >
-                        <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-300 group-hover:scale-[1.02]">
-                          <div className="space-y-4">
-                            <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center group-hover:bg-red-200 transition-colors">
-                              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
-                            </div>
-                            <div>
-                              <p className="text-lg font-semibold text-gray-900">Record New Video</p>
-                              <p className="text-gray-500 mt-1">Record a video using your camera</p>
-                            </div>
+                              <div className="relative">
+                                <div className="bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 p-2 rounded-full shadow-2xl group-active:scale-95 group-hover:scale-105 transition-transform duration-200">
+                                  <div className="bg-white/80 backdrop-blur-lg rounded-full p-10 flex items-center justify-center shadow-lg">
+                                    <FiCamera className="w-16 h-16 text-pink-500 group-hover:scale-110 transition-transform duration-200" style={{ filter: 'drop-shadow(0 4px 16px rgba(236, 72, 153, 0.5))' }} />
                           </div>
                         </div>
+                                <div className="absolute inset-0 rounded-full pointer-events-none animate-pulse bg-gradient-to-tr from-yellow-400/20 via-pink-500/20 to-purple-600/20 blur-lg opacity-60" />
+                              </div>
+                              <span className="mt-7 text-xl font-extrabold text-gray-900 tracking-tight drop-shadow-md">Record Video</span>
+                              <span className="mt-3 text-base text-gray-500 font-medium drop-shadow-sm">Up to 60s, 50MB</span>
                       </button>
                     </div>
-                  </div>
+                  ) : (
+                          <div className={`border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-300 group-hover:scale-[1.02]${isMobile ? ' p-4 text-base' : ''}`}>
+                            <div className="space-y-4">
+                              <div className={`w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors${isMobile ? ' w-12 h-12' : ''}`}>
+                                <svg className={`w-8 h-8 text-blue-600${isMobile ? ' w-6 h-6' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className={`text-lg font-semibold text-gray-900${isMobile ? ' text-base' : ''}`}>Upload Existing Video</p>
+                                <p className={`text-gray-500 mt-1${isMobile ? ' text-sm' : ''}`}>Select a video file from your device</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        </label>
+                      </div>
+                    </div>
                 </div>
               )}
 
@@ -1066,12 +1090,12 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
                     <div className="flex justify-center">
                       <button
                         onClick={stopRecording}
-                        className="group bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-12 py-5 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-red-400"
+                        className={`group bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-12 py-5 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-red-400${isMobile ? ' px-6 py-3 text-sm' : ''}`}
                         aria-label="Stop recording"
                       >
                         <div className="flex items-center space-x-3">
-                          <div className="w-6 h-6 bg-white rounded-sm group-hover:scale-110 transition-transform"></div>
-                          <span>Finish Recording</span>
+                          <div className={`w-6 h-6 bg-white rounded-sm group-hover:scale-110 transition-transform${isMobile ? ' w-4 h-4' : ''}`}></div>
+                          <span>{isMobile ? 'Finish Recording' : 'Finish Recording'}</span>
                         </div>
                       </button>
                     </div>
@@ -1116,26 +1140,26 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
                   <div className="flex justify-center space-x-6">
                     <button
                       onClick={retakeVideo}
-                      className="group bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-gray-400"
+                      className={`group bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-gray-400${isMobile ? ' px-6 py-3 text-sm' : ''}`}
                       aria-label="Retake video"
                     >
                       <div className="flex items-center space-x-3">
-                        <svg className="w-5 h-5 group-hover:rotate-180 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-5 h-5 group-hover:rotate-180 transition-transform duration-300${isMobile ? ' w-4 h-4' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        <span>Retake Video</span>
+                        <span>{isMobile ? 'Retake Video' : 'Retake Video'}</span>
                       </div>
                     </button>
                     <button
                       onClick={confirmVideo}
-                      className="group bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-blue-400"
+                      className={`group bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-blue-400${isMobile ? ' px-6 py-3 text-sm' : ''}`}
                       aria-label="Confirm video"
                     >
                       <div className="flex items-center space-x-3">
-                        <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-5 h-5 group-hover:scale-110 transition-transform${isMobile ? ' w-4 h-4' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
-                        <span>Confirm Video</span>
+                        <span>{isMobile ? 'Confirm Video' : 'Confirm Video'}</span>
                       </div>
                     </button>
                   </div>
@@ -1255,7 +1279,7 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
                     <button
                       onClick={saveChanges}
                       disabled={loading || !desiredRoles.length || !desiredLocation.trim()}
-                      className="group bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-16 py-5 rounded-2xl font-bold text-xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-green-400 disabled:shadow-none"
+                      className={`group bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-16 py-5 rounded-2xl font-bold text-xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-green-400 disabled:shadow-none${isMobile ? ' px-8 py-3 text-sm' : ''}`}
                       aria-label="Save changes"
                     >
                       <div className="flex items-center space-x-3">
@@ -1296,26 +1320,26 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
                     <button
                       onClick={editVideo}
-                      className="group bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-5 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-blue-400"
+                      className={`group bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-5 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-blue-400${isMobile ? ' px-6 py-3 text-sm' : ''}`}
                       aria-label="Edit video"
                     >
                       <div className="flex items-center justify-center space-x-3">
-                        <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-5 h-5 group-hover:rotate-12 transition-transform${isMobile ? ' w-4 h-4' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
-                        <span>Edit Video</span>
+                        <span>{isMobile ? 'Edit Video' : 'Edit Video'}</span>
                       </div>
                     </button>
                     <button
                       onClick={editDetails}
-                      className="group bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-8 py-5 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-purple-400"
+                      className={`group bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-8 py-5 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-purple-400${isMobile ? ' px-6 py-3 text-sm' : ''}`}
                       aria-label="Edit details"
                     >
                       <div className="flex items-center justify-center space-x-3">
-                        <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-5 h-5 group-hover:scale-110 transition-transform${isMobile ? ' w-4 h-4' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                         </svg>
-                        <span>Edit Details</span>
+                        <span>{isMobile ? 'Edit Details' : 'Edit Details'}</span>
                       </div>
                     </button>
                   </div>
@@ -1349,7 +1373,7 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
                     <button
                       onClick={deleteVideo}
                       disabled={loading}
-                      className="group bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-10 py-5 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-red-400 disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none"
+                      className={`group bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-10 py-5 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-red-400 disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none${isMobile ? ' px-6 py-3 text-sm' : ''}`}
                       aria-label="Delete video"
                     >
                       <div className="flex items-center space-x-3">
@@ -1382,9 +1406,9 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
                     <p className="text-gray-600 text-lg max-w-md mx-auto">Upload your resume in PDF, DOC, or DOCX format. Maximum file size is 10MB.</p>
                   </div>
                   
-                  <div className="max-w-lg mx-auto">
-                    <div className="group relative">
-                      <label className="block cursor-pointer">
+                  {isMobile ? (
+                    <div className="flex flex-col items-center justify-center py-10">
+                      <label className="flex flex-col items-center cursor-pointer group">
                         <input
                           type="file"
                           accept=".pdf,.doc,.docx"
@@ -1392,23 +1416,33 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
                           className="hidden"
                           aria-label="Upload resume file"
                         />
-                        <div className="border-2 border-dashed border-gray-300 rounded-3xl p-16 text-center hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 transition-all duration-300 group-hover:scale-[1.02] shadow-lg hover:shadow-xl">
-                          <div className="space-y-6">
-                            <div className="w-24 h-24 mx-auto bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center group-hover:from-blue-200 group-hover:to-indigo-200 transition-all duration-300 shadow-lg">
-                              <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                              </svg>
-                            </div>
-                            <div>
-                              <p className="text-2xl font-bold text-gray-900">Upload Resume</p>
-                              <p className="text-gray-600 mt-3 text-lg">Select a resume file from your device</p>
-                              <p className="text-gray-400 mt-2 text-base">PDF, DOC, or DOCX up to 10MB</p>
-                            </div>
+                        <div className="bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 p-1 rounded-full shadow-xl group-active:scale-95 transition-transform duration-150">
+                          <div className="bg-white rounded-full p-8 flex items-center justify-center">
+                            <FiUpload className="w-14 h-14 text-pink-500 group-hover:scale-110 transition-transform duration-200" />
                           </div>
                         </div>
+                        <span className="mt-5 text-lg font-bold text-gray-900 tracking-tight">Upload Resume</span>
+                        <span className="mt-2 text-sm text-gray-500 font-medium">PDF, DOC, DOCX up to 10MB</span>
                       </label>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="max-w-lg mx-auto">
+                      <div className={`border-2 border-dashed border-gray-300 rounded-3xl p-16 text-center hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 transition-all duration-300 group-hover:scale-[1.02] shadow-lg hover:shadow-xl${isMobile ? ' p-6 text-base' : ''}`}>
+                        <div className="space-y-6">
+                          <div className={`w-24 h-24 mx-auto bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center group-hover:from-blue-200 group-hover:to-indigo-200 transition-all duration-300 shadow-lg${isMobile ? ' w-14 h-14' : ''}`}>
+                            <svg className={`w-12 h-12 text-blue-600${isMobile ? ' w-8 h-8' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className={`text-2xl font-bold text-gray-900${isMobile ? ' text-lg' : ''}`}>Upload Resume</p>
+                            <p className={`text-gray-600 mt-3 text-lg${isMobile ? ' text-sm mt-1' : ''}`}>Select a resume file from your device</p>
+                            <p className={`text-gray-400 mt-2 text-base${isMobile ? ' text-xs mt-1' : ''}`}>PDF, DOC, or DOCX up to 10MB</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1435,20 +1469,20 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
                   <div className="flex justify-center space-x-6">
                     <button
                       onClick={() => setResumeState('initial')}
-                      className="group bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-gray-400"
+                      className={`group bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-gray-400${isMobile ? ' px-6 py-3 text-sm' : ''}`}
                       aria-label="Change resume file"
                     >
                       <div className="flex items-center space-x-3">
-                        <svg className="w-5 h-5 group-hover:rotate-180 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-5 h-5 group-hover:rotate-180 transition-transform duration-300${isMobile ? ' w-4 h-4' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        <span>Change File</span>
+                        <span>{isMobile ? 'Change File' : 'Change File'}</span>
                       </div>
                     </button>
                     <button
                       onClick={saveChanges}
                       disabled={loading}
-                      className="group bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-green-400"
+                      className={`group bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-green-400${isMobile ? ' px-6 py-3 text-sm' : ''}`}
                       aria-label="Save resume"
                     >
                       <div className="flex items-center space-x-3">
@@ -1504,7 +1538,7 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
                         <button
                           onClick={deleteResume}
                           disabled={loading}
-                          className="text-red-600 hover:text-red-800 transition-colors p-3 rounded-xl hover:bg-red-50 border-2 border-transparent hover:border-red-200"
+                          className={`text-red-600 hover:text-red-800 transition-colors p-3 rounded-xl hover:bg-red-50 border-2 border-transparent hover:border-red-200${isMobile ? ' px-3 py-2 text-sm' : ''}`}
                           aria-label="Delete resume"
                         >
                           {loading ? (
@@ -1524,14 +1558,14 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
                   <div className="flex justify-center">
                     <button
                       onClick={() => setResumeState('initial')}
-                      className="group bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-10 py-5 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-blue-400"
+                      className={`group bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-10 py-5 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-blue-400${isMobile ? ' px-6 py-3 text-sm' : ''}`}
                       aria-label="Upload new resume"
                     >
                       <div className="flex items-center space-x-3">
-                        <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-5 h-5 group-hover:scale-110 transition-transform${isMobile ? ' w-4 h-4' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                         </svg>
-                        <span>Upload New Resume</span>
+                        <span>{isMobile ? 'Upload New Resume' : 'Upload New Resume'}</span>
                       </div>
                     </button>
                   </div>

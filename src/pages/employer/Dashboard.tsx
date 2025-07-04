@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
 import { supabase } from '../../config/supabase';
 import { FaBriefcase, FaGraduationCap, FaPlus, FaRocket } from 'react-icons/fa';
+import useIsMobile from '../../hooks/useIsMobile';
 
 type Application = {
   id: string;
@@ -17,6 +18,7 @@ type Application = {
 
 const EmployerDashboard: React.FC = () => {
   const { user, profile } = useContext(AuthContext);
+  const isMobile = useIsMobile();
 
   const [stats, setStats] = useState({
     activeJobs: 0,
@@ -97,6 +99,109 @@ const EmployerDashboard: React.FC = () => {
 
     fetchStatsAndApplications();
   }, [user]);
+
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col">
+        <div className="p-4 pb-2">
+          <h1 className="text-2xl font-bold text-black mb-2">Welcome, {profile?.full_name || 'Employer'}</h1>
+          <div className="flex gap-2 mb-4">
+            <Link to="/employer/post-job" className="flex-1 flex flex-col items-center justify-center bg-[#185a9d] text-white rounded-xl py-3 shadow font-semibold text-sm active:scale-95 transition">
+              <FaBriefcase className="w-5 h-5 mb-1" />
+              Post Job
+            </Link>
+            <Link to="/employer/post-internship" className="flex-1 flex flex-col items-center justify-center bg-[#43cea2] text-white rounded-xl py-3 shadow font-semibold text-sm active:scale-95 transition">
+              <FaGraduationCap className="w-5 h-5 mb-1" />
+              Post Internship
+            </Link>
+          </div>
+          {/* Stats Row */}
+          <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4">
+            <div className="min-w-[120px] bg-[#f1f5f9] rounded-xl p-3 flex flex-col items-center shadow">
+              <span className="text-xs font-medium text-gray-500">Jobs</span>
+              <span className="text-xl font-bold text-black">{stats.activeJobs}</span>
+            </div>
+            <div className="min-w-[120px] bg-[#f1f5f9] rounded-xl p-3 flex flex-col items-center shadow">
+              <span className="text-xs font-medium text-gray-500">Internships</span>
+              <span className="text-xl font-bold text-black">{stats.activeInternships}</span>
+            </div>
+            <div className="min-w-[120px] bg-[#f1f5f9] rounded-xl p-3 flex flex-col items-center shadow">
+              <span className="text-xs font-medium text-gray-500">Applications</span>
+              <span className="text-xl font-bold text-black">{stats.totalApplications}</span>
+            </div>
+            <div className="min-w-[120px] bg-[#f1f5f9] rounded-xl p-3 flex flex-col items-center shadow">
+              <span className="text-xs font-medium text-gray-500">New</span>
+              <span className="text-xl font-bold text-black">{stats.newApplications}</span>
+            </div>
+            <div className="min-w-[120px] bg-[#f1f5f9] rounded-xl p-3 flex flex-col items-center shadow">
+              <span className="text-xs font-medium text-gray-500">Interviews</span>
+              <span className="text-xl font-bold text-black">{stats.interviewsScheduled}</span>
+            </div>
+          </div>
+        </div>
+        {/* Recent Applications - swipeable list */}
+        <div className="px-2 pb-4">
+          <div className="bg-[#f1f5f9] rounded-2xl shadow p-3">
+            <h2 className="text-lg font-semibold text-black mb-2">Recent Applications</h2>
+            <div className="flex flex-col gap-2">
+              {recentApplications.length === 0 ? (
+                <div className="text-gray-400 text-center py-8">No recent applications.</div>
+              ) : recentApplications.map((application) => (
+                <Link key={application.id} to={`/employer/applications/${application.id}`} className="flex items-center gap-3 bg-white rounded-xl p-3 shadow-sm hover:shadow-md transition">
+                  <div className="flex-1">
+                    <div className="font-semibold text-black text-sm">{application.candidateName || application.id}</div>
+                    <div className="text-xs text-gray-500">{application.position} • {application.type}</div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium mb-1 ${
+                      application.status === 'New' ? 'bg-[#ff2d55]/10 text-[#ff2d55]' :
+                      application.status === 'Under Review' ? 'bg-[#ff9500]/10 text-[#ff9500]' :
+                      'bg-[#34c759]/10 text-[#34c759]'
+                    }`}>
+                      {application.status}
+                    </span>
+                    <span className="text-xs text-gray-400">{application.date}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* Reverse Hiring Features */}
+        <div className="px-2 pb-8">
+          <div className="bg-[#f1f5f9] rounded-2xl shadow p-3">
+            <h2 className="text-lg font-semibold text-black mb-2">Reverse Hiring</h2>
+            <div className="flex flex-col gap-2">
+              <Link to="/employer/reels" className="flex items-center gap-3 bg-gradient-to-br from-[#00c6fb] to-[#005bea] p-4 rounded-xl border border-[#00c6fb] hover:border-[#005bea] shadow text-white">
+                <span className="text-2xl">🎥</span>
+                <div className="flex-1">
+                  <div className="font-semibold text-white">Job Seeker Reels</div>
+                  <div className="text-xs text-white/80">Browse video profiles</div>
+                </div>
+                <span className="text-xs font-bold">Go</span>
+              </Link>
+              <Link to="/employer/saved-videos" className="flex items-center gap-3 bg-blue-50 p-4 rounded-xl border border-blue-200 hover:border-blue-300 shadow">
+                <span className="text-2xl">💾</span>
+                <div className="flex-1">
+                  <div className="font-semibold text-black">Saved Videos</div>
+                  <div className="text-xs text-gray-600">View your saved profiles</div>
+                </div>
+                <span className="text-xs font-bold text-black">Go</span>
+              </Link>
+              <Link to="/employer/credits" className="flex items-center gap-3 bg-purple-50 p-4 rounded-xl border border-purple-200 hover:border-purple-300 shadow">
+                <span className="text-2xl">💳</span>
+                <div className="flex-1">
+                  <div className="font-semibold text-black">Credits</div>
+                  <div className="text-xs text-gray-600">Manage your balance</div>
+                </div>
+                <span className="text-xs font-bold text-black">Go</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f1f5f9] via-[#e3f0fa] to-[#f4f8fb]">

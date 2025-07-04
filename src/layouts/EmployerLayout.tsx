@@ -2,15 +2,17 @@ import React, { useState, useContext, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import { supabase } from '../config/supabase';
-import EmployerMobileNav from '../components/EmployerMobileNav';
 import AIAssistant from '../components/AIAssistant';
 import toast from 'react-hot-toast';
+import useIsMobile from '../hooks/useIsMobile';
+import EmployerLayoutMobile from './mobile/EmployerLayoutMobile';
 
 const EmployerLayout: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { profile, user } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const checkCompanyProfile = async () => {
@@ -57,6 +59,8 @@ const EmployerLayout: React.FC = () => {
   const isActive = (path: string) => {
     return location.pathname === path;
   };
+
+  if (isMobile) return <EmployerLayoutMobile />;
 
   return (
     <div className="min-h-screen bg-[#f1f5f9]">
@@ -129,45 +133,45 @@ const EmployerLayout: React.FC = () => {
             <nav className="space-y-1">
               <Link
                 to="/employer/dashboard"
-                className={`flex items-center px-4 py-3 text-gray-700 rounded-xl transition-colors duration-200 ${
-                  isActive('/employer/dashboard') ? 'text-[#185a9d] bg-[#e3f0fa] shadow' : 'hover:bg-[#e3f0fa] hover:text-[#185a9d] hover:shadow'
+                className={`flex items-center px-4 py-3 rounded-xl transition-colors duration-200 ${
+                  isActive('/employer/dashboard') ? 'text-black bg-[#e3f0fa] shadow' : 'text-gray-700 hover:bg-[#e3f0fa] hover:text-black hover:shadow'
                 }`}
               >
                 <span className="text-sm font-medium">Dashboard</span>
               </Link>
               <Link
                 to="/employer/jobs"
-                className={`flex items-center px-4 py-3 text-gray-700 rounded-xl transition-colors duration-200 ${
-                  isActive('/employer/jobs') ? 'text-[#185a9d] bg-[#e3f0fa] shadow' : 'hover:bg-[#e3f0fa] hover:text-[#185a9d] hover:shadow'
+                className={`flex items-center px-4 py-3 rounded-xl transition-colors duration-200 ${
+                  isActive('/employer/jobs') ? 'text-black bg-[#e3f0fa] shadow' : 'text-gray-700 hover:bg-[#e3f0fa] hover:text-black hover:shadow'
                 }`}
               >
                 <span className="text-sm font-medium">Posted Jobs</span>
               </Link>
               <Link
                 to="/employer/internships"
-                className={`flex items-center px-4 py-3 text-gray-700 rounded-xl transition-colors duration-200 ${
-                  isActive('/employer/internships') ? 'text-[#185a9d] bg-[#e3f0fa] shadow' : 'hover:bg-[#e3f0fa] hover:text-[#185a9d] hover:shadow'
+                className={`flex items-center px-4 py-3 rounded-xl transition-colors duration-200 ${
+                  isActive('/employer/internships') ? 'text-black bg-[#e3f0fa] shadow' : 'text-gray-700 hover:bg-[#e3f0fa] hover:text-black hover:shadow'
                 }`}
               >
                 <span className="text-sm font-medium">Posted Internships</span>
               </Link>
               <Link
                 to="/employer/applications"
-                className={`flex items-center px-4 py-3 text-gray-700 rounded-xl transition-colors duration-200 ${
-                  isActive('/employer/applications') ? 'text-[#185a9d] bg-[#e3f0fa] shadow' : 'hover:bg-[#e3f0fa] hover:text-[#185a9d] hover:shadow'
+                className={`flex items-center px-4 py-3 rounded-xl transition-colors duration-200 ${
+                  isActive('/employer/applications') ? 'text-black bg-[#e3f0fa] shadow' : 'text-gray-700 hover:bg-[#e3f0fa] hover:text-black hover:shadow'
                 }`}
               >
                 <span className="text-sm font-medium">Applications</span>
               </Link>
               <Link
                 to="/employer/billing"
-                className="flex items-center px-4 py-3 text-gray-700 rounded-xl transition-colors duration-200 hover:bg-[#e3f0fa] hover:text-[#185a9d] hover:shadow"
+                className="flex items-center px-4 py-3 text-gray-700 rounded-xl transition-colors duration-200 hover:bg-[#e3f0fa] hover:text-black hover:shadow"
               >
                 <span className="text-sm font-medium">Billing</span>
               </Link>
               <Link
                 to="/employer/analytics"
-                className="flex items-center px-4 py-3 text-gray-700 rounded-xl transition-colors duration-200 hover:bg-[#e3f0fa] hover:text-[#185a9d] hover:shadow"
+                className="flex items-center px-4 py-3 text-gray-700 rounded-xl transition-colors duration-200 hover:bg-[#e3f0fa] hover:text-black hover:shadow"
               >
                 <span className="text-sm font-medium">Analytics</span>
               </Link>
@@ -179,16 +183,16 @@ const EmployerLayout: React.FC = () => {
                 </div>
                 <Link
                   to="/employer/reels"
-                  className={`flex items-center px-4 py-3 text-gray-700 hover:bg-gradient-to-br from-[#43cea2] via-[#185a9d] to-[#2b5876] hover:text-gradient-to-r from-[#43cea2] to-[#185a9d] rounded-xl transition-colors duration-200 ${
-                    isActive('/employer/reels') ? 'bg-gradient-to-br from-[#43cea2] via-[#185a9d] to-[#2b5876] text-gradient-to-r from-[#43cea2] to-[#185a9d]' : ''
+                  className={`flex items-center px-4 py-3 rounded-xl transition-colors duration-200 ${
+                    isActive('/employer/reels') ? 'text-black bg-[#e3f0fa] shadow' : 'text-gray-700 hover:bg-[#e3f0fa] hover:text-black hover:shadow'
                   }`}
                 >
                   <span className="text-sm font-medium">Job Seeker Reels</span>
                 </Link>
                 <Link
                   to="/employer/saved-videos"
-                  className={`flex items-center px-4 py-3 text-gray-700 hover:bg-gradient-to-br from-[#43cea2] via-[#185a9d] to-[#2b5876] hover:text-gradient-to-r from-[#43cea2] to-[#185a9d] rounded-xl transition-colors duration-200 ${
-                    isActive('/employer/saved-videos') ? 'bg-gradient-to-br from-[#43cea2] via-[#185a9d] to-[#2b5876] text-gradient-to-r from-[#43cea2] to-[#185a9d]' : ''
+                  className={`flex items-center px-4 py-3 rounded-xl transition-colors duration-200 ${
+                    isActive('/employer/saved-videos') ? 'text-black bg-[#e3f0fa] shadow' : 'text-gray-700 hover:bg-[#e3f0fa] hover:text-black hover:shadow'
                   }`}
                 >
                   <span className="text-sm font-medium">Saved Videos</span>
@@ -286,9 +290,6 @@ const EmployerLayout: React.FC = () => {
           </div>
         </div>
       </footer>
-
-      {/* Mobile Bottom Navigation */}
-      <EmployerMobileNav />
 
       {/* AI Assistant */}
       <AIAssistant size="large" />

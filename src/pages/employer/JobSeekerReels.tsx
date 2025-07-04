@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { AuthContext } from '../../contexts/AuthContext';
 import ReelsInterface from '../../components/ReelsInterface';
+import useIsMobile from '../../hooks/useIsMobile';
 
 interface JobSeekerReel {
   auth_id: string;
@@ -28,6 +29,7 @@ const JobSeekerReels: React.FC = () => {
   const [savedVideoIds, setSavedVideoIds] = useState<string[]>([]);
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+  const isMobile = useIsMobile();
 
   const fetchSavedVideos = async () => {
     if (!user) return;
@@ -252,6 +254,105 @@ const JobSeekerReels: React.FC = () => {
         onCancelViewProfile={() => setShowConfirm(null)}
         savedVideoIds={savedVideoIds}
       />
+    );
+  }
+
+  // --- MOBILE UI ---
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-[#f1f5f9] pb-20 flex flex-col items-center">
+        <div className="w-full max-w-md mx-auto px-2 pt-4">
+          <h1 className="text-xl font-bold text-[#185a9d] mb-3 text-center">Job Seeker Reels</h1>
+          {/* Search/Filter Bar */}
+          <form onSubmit={handleFilter} className="flex gap-2 mb-4">
+            <input
+              type="text"
+              placeholder="Role/Designation"
+              value={roleFilter}
+              onChange={e => setRoleFilter(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm"
+            />
+            <input
+              type="text"
+              placeholder="Location"
+              value={locationFilter}
+              onChange={e => setLocationFilter(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm"
+            />
+            <button type="submit" className="px-3 py-2 bg-[#185a9d] text-white rounded-lg font-semibold text-sm">Search</button>
+            <button type="button" onClick={handleClearFilters} className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold text-sm">Clear</button>
+          </form>
+          {loading ? (
+            <div className="w-full flex justify-center items-center py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#185a9d]"></div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {reels.length === 0 && (
+                <div className="text-center text-gray-500 py-12">No job seeker videos available yet.</div>
+              )}
+              {reels.map((reel) => (
+                <div key={reel.auth_id} className="bg-white rounded-xl border border-[#e3f0fa] shadow p-3 flex flex-col items-center">
+                  <video
+                    src={reel.intro_video_url}
+                    poster={reel.video_thumbnail_url}
+                    controls
+                    className="rounded-lg w-full max-h-64 bg-black mb-2"
+                    preload="metadata"
+                  />
+                  <div className="w-full flex flex-col items-center mb-2">
+                    <span className="text-gray-700 font-medium text-sm">{reel.full_name || reel.username || 'Unknown'}</span>
+                    <span className="text-xs text-gray-500">{reel.title}</span>
+                    <span className="text-xs text-gray-500">{reel.desired_location || 'Not specified'}</span>
+                    {reel.desired_roles && reel.desired_roles.length > 0 && (
+                      <span className="text-xs text-gray-400">Roles: {reel.desired_roles.join(', ')}</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2 w-full">
+                    <button
+                      className="flex-1 py-2 rounded-lg bg-[#185a9d] text-white text-xs font-semibold shadow"
+                      onClick={() => handleViewProfile(reel.auth_id)}
+                      disabled={viewingId === reel.auth_id}
+                    >
+                      {viewingId === reel.auth_id ? 'Processing...' : 'View Profile'}
+                    </button>
+                    <button
+                      className="flex-1 py-2 rounded-lg bg-gray-100 text-[#185a9d] text-xs font-semibold shadow"
+                      onClick={() => handleSaveVideo(reel.auth_id)}
+                      disabled={savingId === reel.auth_id}
+                    >
+                      {savingId === reel.auth_id ? 'Saving...' : 'Save Video'}
+                    </button>
+                  </div>
+                  {/* Confirmation Dialog */}
+                  {showConfirm === reel.auth_id && (
+                    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                      <div className="bg-white rounded-xl shadow-lg p-6 max-w-xs w-full flex flex-col items-center">
+                        <h2 className="text-base font-semibold mb-3 text-gray-900">Use 1 credit to view full profile?</h2>
+                        <p className="text-gray-600 mb-4 text-center text-xs">This action will deduct 1 credit from your balance. Are you sure you want to continue?</p>
+                        <div className="flex gap-2 w-full justify-center">
+                          <button
+                            className="flex-1 py-2 rounded-lg bg-[#185a9d] text-white text-xs font-semibold shadow"
+                            onClick={() => confirmViewProfile(reel.auth_id)}
+                          >
+                            Yes
+                          </button>
+                          <button
+                            className="flex-1 py-2 rounded-lg bg-gray-200 text-gray-700 text-xs font-semibold shadow"
+                            onClick={() => setShowConfirm(null)}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     );
   }
 

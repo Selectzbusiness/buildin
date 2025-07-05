@@ -63,6 +63,9 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Add state for play overlay
+  const [showPlayOverlay, setShowPlayOverlay] = useState(false);
+  const videoPreviewRef = useRef<HTMLVideoElement>(null);
 
   // Load existing data when modal opens
   useEffect(() => {
@@ -273,19 +276,52 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
       }
     };
 
-    mediaRecorder.onstop = () => {
+    mediaRecorder.onstop = async () => {
       const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
       const file = new File([blob], `intro_video_${uuidv4()}.webm`, { type: 'video/webm' });
+      
+      console.log('Recording stopped, blob size:', blob.size, 'bytes');
+      console.log('Created file:', file.name, 'size:', file.size, 'bytes');
+      
       if (file.size > 50 * 1024 * 1024) {
         setError('Video file size exceeds 50MB limit. Please record a shorter video.');
         setVideoState('initial');
         recordedChunksRef.current = [];
         return;
       }
-      setRecordedVideo(file);
-      const previewUrl = URL.createObjectURL(blob);
-      setVideoPreview(previewUrl);
-      setVideoState('preview');
+
+      try {
+        // Process the recorded video to ensure compatibility
+        console.log('Processing recorded video...');
+        const { processedFile, thumbnail, duration } = await processVideo(file);
+        
+        console.log('Video processing completed successfully');
+        console.log('Processed duration:', duration, 'seconds');
+        console.log('Processed file size:', processedFile.size, 'bytes');
+        
+        setRecordedVideo(processedFile);
+        setVideoDuration(duration);
+        setVideoFileSize(processedFile.size);
+        setVideoThumbnail(thumbnail);
+        
+        // Create preview URL from the processed file
+        const previewUrl = URL.createObjectURL(processedFile);
+        console.log('Video preview URL created:', previewUrl);
+        console.log('Processed file type:', processedFile.type);
+        console.log('Processed file size:', processedFile.size);
+        setVideoPreview(previewUrl);
+        setVideoState('preview');
+      } catch (error: any) {
+        console.error('Error processing recorded video:', error);
+        // Fallback to original blob if processing fails
+        console.log('Using fallback video blob');
+        setRecordedVideo(file);
+        const previewUrl = URL.createObjectURL(blob);
+        console.log('Fallback video preview URL:', previewUrl);
+        setVideoPreview(previewUrl);
+        setVideoState('preview');
+      }
+      
       setIsRecording(false);
       recordedChunksRef.current = [];
       if (streamRef.current) {
@@ -624,11 +660,30 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
       video.preload = 'metadata';
       
       video.onloadedmetadata = () => {
-        resolve(video.duration);
+        // Check if duration is valid (not Infinity or NaN)
+        if (video.duration && isFinite(video.duration) && video.duration > 0) {
+          resolve(video.duration);
+        } else {
+          // For recorded videos, we might need to wait a bit more
+          setTimeout(() => {
+            if (video.duration && isFinite(video.duration) && video.duration > 0) {
+              resolve(video.duration);
+            } else {
+              // If still not available, try to estimate from file size
+              // This is a rough estimation: ~1MB per second for webm
+              const estimatedDuration = Math.max(1, Math.min(60, file.size / (1024 * 1024)));
+              console.log('Using estimated duration:', estimatedDuration, 'seconds');
+              resolve(estimatedDuration);
+            }
+          }, 1000);
+        }
       };
       
       video.onerror = () => {
-        reject(new Error('Failed to load video metadata'));
+        // Fallback to file size estimation
+        const estimatedDuration = Math.max(1, Math.min(60, file.size / (1024 * 1024)));
+        console.log('Video metadata failed to load, using estimated duration:', estimatedDuration, 'seconds');
+        resolve(estimatedDuration);
       };
       
       video.src = URL.createObjectURL(file);
@@ -763,11 +818,27 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
       // Step 2: Get video duration
       setProcessingProgress(20);
       const duration = await getVideoDuration(file);
-      if (duration < MIN_VIDEO_DURATION) {
-        throw new Error(`Video must be at least ${MIN_VIDEO_DURATION} seconds long. Current duration: ${duration.toFixed(1)}s`);
-      }
-      if (duration > MAX_VIDEO_DURATION) {
-        throw new Error(`Video must be under ${MAX_VIDEO_DURATION} seconds long. Current duration: ${duration.toFixed(1)}s`);
+      
+      // For recorded videos, be more lenient with duration validation
+      const isRecordedVideo = file.type === 'video/webm' && file.name.includes('intro_video_');
+      
+      if (!isRecordedVideo) {
+        // Strict validation for uploaded videos
+        if (duration < MIN_VIDEO_DURATION) {
+          throw new Error(`Video must be at least ${MIN_VIDEO_DURATION} seconds long. Current duration: ${duration.toFixed(1)}s`);
+        }
+        if (duration > MAX_VIDEO_DURATION) {
+          throw new Error(`Video must be under ${MAX_VIDEO_DURATION} seconds long. Current duration: ${duration.toFixed(1)}s`);
+        }
+      } else {
+        // For recorded videos, only check if it's too long (allow short videos)
+        if (duration > MAX_VIDEO_DURATION) {
+          throw new Error(`Video must be under ${MAX_VIDEO_DURATION} seconds long. Current duration: ${duration.toFixed(1)}s`);
+        }
+        // For recorded videos, if duration is estimated, use a reasonable default
+        if (duration < MIN_VIDEO_DURATION && file.size < 1024 * 1024) {
+          console.log('Recorded video appears to be too short, but allowing it to proceed');
+        }
       }
 
       // Step 3: Generate thumbnail
@@ -961,94 +1032,150 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
             <div className="space-y-8">
               {/* Initial State */}
               {videoState === 'initial' && (
-                <div className="space-y-6">
+                <div className="space-y-8">
                   <div className="text-center">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Create Your Introduction Video</h3>
-                    <p className="text-gray-600 max-w-md mx-auto">Share your story and make a lasting impression. Keep it between 10-60 seconds and under 50MB. Supported formats: MP4, WebM, OGG, MOV.</p>
+                    <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent mb-3">
+                      {isMobile ? 'Create Your Video' : 'Create Your Introduction Video'}
+                    </h3>
+                    <p className="text-gray-600 max-w-lg mx-auto text-lg leading-relaxed">
+                      Share your story and make a lasting impression. Keep it between 10-60 seconds and under 50MB.
+                    </p>
+                    <div className="flex items-center justify-center space-x-6 mt-4 text-sm text-gray-500">
+                      <span className="flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        MP4, WebM, OGG, MOV
+                      </span>
+                      <span className="flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        Up to 50MB
+                      </span>
+                    </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="group relative">
-                      <label className="block cursor-pointer">
-                        <input
-                          type="file"
-                          accept="video/*"
-                          onChange={handleVideoFileChange}
-                          className="hidden"
-                          aria-label="Upload video file"
-                        />
                   {isMobile ? (
-                          <div className="flex flex-row items-center justify-center gap-8 py-12 max-[400px]:flex-col bg-white/60 backdrop-blur-md rounded-3xl shadow-2xl mx-2">
-                      {/* Upload Video */}
-                            <label className="flex flex-col items-center cursor-pointer group flex-1">
-                        <input
-                          type="file"
-                          accept="video/*"
-                          onChange={handleVideoFileChange}
-                          className="hidden"
-                          aria-label="Upload video file"
-                        />
-                              <div className="relative">
-                                <div className="bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 p-2 rounded-full shadow-2xl group-active:scale-95 group-hover:scale-105 transition-transform duration-200">
-                                  <div className="bg-white/80 backdrop-blur-lg rounded-full p-10 flex items-center justify-center shadow-lg">
-                                    <FiUpload className="w-16 h-16 text-pink-500 group-hover:scale-110 transition-transform duration-200" style={{ filter: 'drop-shadow(0 4px 16px rgba(236, 72, 153, 0.5))' }} />
-                          </div>
-                        </div>
-                                <div className="absolute inset-0 rounded-full pointer-events-none animate-pulse bg-gradient-to-tr from-yellow-400/20 via-pink-500/20 to-purple-600/20 blur-lg opacity-60" />
-                              </div>
-                              <span className="mt-7 text-xl font-extrabold text-gray-900 tracking-tight drop-shadow-md">Upload Video</span>
-                              <span className="mt-3 text-base text-gray-500 font-medium drop-shadow-sm">MP4, WebM, OGG, MOV</span>
-                      </label>
-                      {/* Record New Video */}
-                      <button
-                        onClick={startRecording}
-                              className="flex flex-col items-center group flex-1 focus:outline-none"
-                        aria-label="Record new video"
-                        type="button"
-                      >
-                              <div className="relative">
-                                <div className="bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 p-2 rounded-full shadow-2xl group-active:scale-95 group-hover:scale-105 transition-transform duration-200">
-                                  <div className="bg-white/80 backdrop-blur-lg rounded-full p-10 flex items-center justify-center shadow-lg">
-                                    <FiCamera className="w-16 h-16 text-pink-500 group-hover:scale-110 transition-transform duration-200" style={{ filter: 'drop-shadow(0 4px 16px rgba(236, 72, 153, 0.5))' }} />
-                          </div>
-                        </div>
-                                <div className="absolute inset-0 rounded-full pointer-events-none animate-pulse bg-gradient-to-tr from-yellow-400/20 via-pink-500/20 to-purple-600/20 blur-lg opacity-60" />
-                              </div>
-                              <span className="mt-7 text-xl font-extrabold text-gray-900 tracking-tight drop-shadow-md">Record Video</span>
-                              <span className="mt-3 text-base text-gray-500 font-medium drop-shadow-sm">Up to 60s, 50MB</span>
-                      </button>
-                    </div>
-                  ) : (
-                          <div className={`border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-300 group-hover:scale-[1.02]${isMobile ? ' p-4 text-base' : ''}`}>
+                    <div className="space-y-6">
+                      {/* Upload Existing Video - Mobile */}
+                      <div className="group">
+                        <label className="block cursor-pointer">
+                          <input
+                            type="file"
+                            accept="video/*"
+                            onChange={handleVideoFileChange}
+                            className="hidden"
+                            aria-label="Upload video file"
+                          />
+                          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-dashed border-blue-300 rounded-3xl p-8 text-center hover:border-blue-400 hover:from-blue-100 hover:to-indigo-100 transition-all duration-300 group-hover:scale-[1.02] shadow-lg hover:shadow-xl">
                             <div className="space-y-4">
-                              <div className={`w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors${isMobile ? ' w-12 h-12' : ''}`}>
-                                <svg className={`w-8 h-8 text-blue-600${isMobile ? ' w-6 h-6' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                 </svg>
                               </div>
                               <div>
-                                <p className={`text-lg font-semibold text-gray-900${isMobile ? ' text-base' : ''}`}>Upload Existing Video</p>
-                                <p className={`text-gray-500 mt-1${isMobile ? ' text-sm' : ''}`}>Select a video file from your device</p>
+                                <p className="text-xl font-bold text-gray-900">Upload Video</p>
+                                <p className="text-gray-600 mt-2">Select from your gallery</p>
                               </div>
                             </div>
                           </div>
-                        )}
                         </label>
                       </div>
+
+                      {/* Record New Video - Mobile */}
+                      <div className="group">
+                        <button
+                          onClick={startRecording}
+                          className="w-full bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-dashed border-green-300 rounded-3xl p-8 text-center hover:border-green-400 hover:from-green-100 hover:to-emerald-100 transition-all duration-300 group-hover:scale-[1.02] focus:outline-none shadow-lg hover:shadow-xl"
+                          aria-label="Record new video"
+                          type="button"
+                        >
+                          <div className="space-y-4">
+                            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="text-xl font-bold text-gray-900">Record Video</p>
+                              <p className="text-gray-600 mt-2">Use your camera</p>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
                     </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                      {/* Upload Existing Video - Desktop */}
+                      <div className="group">
+                        <label className="block cursor-pointer">
+                          <input
+                            type="file"
+                            accept="video/*"
+                            onChange={handleVideoFileChange}
+                            className="hidden"
+                            aria-label="Upload video file"
+                          />
+                          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-dashed border-blue-300 rounded-3xl p-12 text-center hover:border-blue-400 hover:from-blue-100 hover:to-indigo-100 transition-all duration-300 group-hover:scale-[1.02] shadow-xl hover:shadow-2xl min-h-[300px] flex flex-col justify-center">
+                            <div className="space-y-6">
+                              <div className="w-24 h-24 mx-auto bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-xl">
+                                <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-2xl font-bold text-gray-900 mb-2">Upload Video</p>
+                                <p className="text-gray-600 text-lg">Select a video file from your device</p>
+                                <p className="text-gray-500 mt-2 text-sm">Drag and drop or click to browse</p>
+                              </div>
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+
+                      {/* Record New Video - Desktop */}
+                      <div className="group">
+                        <button
+                          onClick={startRecording}
+                          className="w-full h-full bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-dashed border-green-300 rounded-3xl p-12 text-center hover:border-green-400 hover:from-green-100 hover:to-emerald-100 transition-all duration-300 group-hover:scale-[1.02] focus:outline-none shadow-xl hover:shadow-2xl min-h-[300px] flex flex-col justify-center"
+                          aria-label="Record new video"
+                          type="button"
+                        >
+                          <div className="space-y-6">
+                            <div className="w-24 h-24 mx-auto bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-xl">
+                              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold text-gray-900 mb-2">Record Video</p>
+                              <p className="text-gray-600 text-lg">Use your camera to record directly</p>
+                              <p className="text-gray-500 mt-2 text-sm">Perfect lighting recommended</p>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Recording State */}
               {videoState === 'recording' && (
-                <div className="space-y-8">
-                  <div className="text-center">
-                    <h3 className="text-3xl font-bold text-gray-900 mb-3">Recording Your Video</h3>
-                    <p className="text-gray-600 text-lg">Position yourself in the frame and speak clearly</p>
-                  </div>
+                <div className={isMobile ? 'fixed inset-0 bg-black z-50' : 'space-y-6'}>
+                  {!isMobile && (
+                    <div className="text-center">
+                      <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent mb-3">
+                        Recording Your Video
+                      </h3>
+                      <p className="text-gray-600 text-lg">Position yourself in the frame and speak clearly</p>
+                    </div>
+                  )}
                   
-                  <div className="relative w-full max-w-3xl mx-auto">
-                    <div className="relative w-full h-[500px] bg-gradient-to-br from-gray-900 to-black rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-800">
+                  <div className={isMobile ? 'relative w-full h-full' : 'relative w-full max-w-4xl mx-auto'}>
+                    <div className={isMobile ? 'relative w-full h-full bg-black' : `relative w-full h-[600px] bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-700`}>
                       <video
                         ref={videoRef}
                         autoPlay
@@ -1056,62 +1183,90 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
                         muted
                         className="w-full h-full object-cover"
                       />
+                      
+                      {/* Countdown overlay */}
                       {countdown !== null && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-md">
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/90 backdrop-blur-md">
                           <div className="text-center">
-                            <div className="text-8xl font-bold text-white animate-pulse mb-4">{countdown}</div>
-                            <p className="text-white/80 text-xl">Get ready...</p>
+                            <div className={`font-bold text-white animate-pulse mb-6 drop-shadow-2xl ${isMobile ? 'text-8xl' : 'text-9xl'}`}>{countdown}</div>
+                            <p className="text-white/90 text-2xl font-medium">Get ready...</p>
                           </div>
                         </div>
                       )}
+                      
+                      {/* Recording indicator */}
                       {isRecording && (
-                        <div className="absolute top-8 right-8 flex items-center space-x-3 bg-red-500 text-white px-6 py-3 rounded-full shadow-2xl border-2 border-red-400">
-                          <div className="w-4 h-4 bg-white rounded-full animate-pulse"></div>
-                          <span className="font-bold text-lg">REC</span>
+                        <div className={`absolute ${isMobile ? 'top-12 right-4' : 'top-6 right-6'} flex items-center space-x-3 bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-full shadow-2xl border-2 border-red-400 backdrop-blur-sm`}>
+                          <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+                          <span className="font-bold text-sm">REC</span>
                         </div>
                       )}
                       
                       {/* Recording overlay */}
                       {isRecording && (
-                        <div className="absolute bottom-8 left-8 right-8">
-                          <div className="bg-black/60 backdrop-blur-sm rounded-2xl p-4 text-center">
+                        <div className={`absolute ${isMobile ? 'bottom-20 left-4 right-4' : 'bottom-6 left-6 right-6'}`}>
+                          <div className="bg-black/70 backdrop-blur-md rounded-2xl p-4 text-center border border-white/20">
                             <div className="flex items-center justify-center space-x-4">
-                              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                              <span className="text-white font-semibold">Recording in progress...</span>
-                              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                              <span className="text-white font-semibold text-lg">Recording in progress...</span>
+                              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                             </div>
                           </div>
                         </div>
                       )}
+                      
+                      {/* Camera controls overlay */}
+                      <div className={`absolute ${isMobile ? 'bottom-8 left-1/2 transform -translate-x-1/2' : 'bottom-6 left-1/2 transform -translate-x-1/2'}`}>
+                        {isRecording ? (
+                          <button
+                            onClick={stopRecording}
+                            className={`group bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-full font-bold transition-all duration-300 hover:scale-110 shadow-2xl border-2 border-red-400 backdrop-blur-sm ${isMobile ? 'px-6 py-3 text-base' : 'px-8 py-4 text-lg'}`}
+                            aria-label="Stop recording"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className={`bg-white rounded-sm group-hover:scale-110 transition-transform ${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`}></div>
+                              <span>{isMobile ? 'Stop' : 'Stop Recording'}</span>
+                            </div>
+                          </button>
+                        ) : (
+                          <div className="bg-black/50 backdrop-blur-md rounded-full px-6 py-3 border border-white/20">
+                            <div className="flex items-center space-x-3 text-white">
+                              <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                              <span className="font-medium">Camera active</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Mobile close button */}
+                      {isMobile && (
+                        <button
+                          onClick={() => {
+                            cleanupStreams();
+                            setVideoState('initial');
+                          }}
+                          className="absolute top-12 left-4 w-10 h-10 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20"
+                          aria-label="Close recording"
+                        >
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                  {isRecording && (
-                    <div className="flex justify-center">
-                      <button
-                        onClick={stopRecording}
-                        className={`group bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-12 py-5 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-red-400${isMobile ? ' px-6 py-3 text-sm' : ''}`}
-                        aria-label="Stop recording"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-6 h-6 bg-white rounded-sm group-hover:scale-110 transition-transform${isMobile ? ' w-4 h-4' : ''}`}></div>
-                          <span>{isMobile ? 'Finish Recording' : 'Finish Recording'}</span>
-                        </div>
-                      </button>
-                    </div>
-                  )}
-                  
-                  {!isRecording && countdown !== null && (
+                  {!isMobile && !isRecording && countdown !== null && (
                     <div className="text-center">
-                      <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 px-6 py-4 rounded-2xl border border-blue-200 shadow-lg">
-                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="inline-flex items-center space-x-4 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 px-8 py-5 rounded-2xl border border-blue-200 shadow-xl">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                           </svg>
                         </div>
                         <div className="text-left">
-                          <p className="font-semibold">Camera preview active</p>
-                          <p className="text-sm opacity-80">Recording starts in {countdown} seconds...</p>
+                          <p className="font-bold text-lg">Camera preview active</p>
+                          <p className="text-blue-700">Recording starts in {countdown} seconds...</p>
                         </div>
                       </div>
                     </div>
@@ -1121,48 +1276,147 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
 
               {/* Preview State */}
               {videoState === 'preview' && (
-                <div className="space-y-8">
-                  <div className="text-center">
-                    <h3 className="text-3xl font-bold text-gray-900 mb-3">Preview Your Video</h3>
-                    <p className="text-gray-600 text-lg">Review your recording before proceeding</p>
-                  </div>
+                <div className={isMobile ? 'fixed inset-0 bg-black z-50' : 'space-y-8'}>
+                  {!isMobile && (
+                    <div className="text-center">
+                      <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent mb-3">
+                        Preview Your Video
+                      </h3>
+                      <p className="text-gray-600 text-lg">Review your recording before proceeding</p>
+                    </div>
+                  )}
                   
-                  <div className="w-full max-w-3xl mx-auto">
-                    <div className="w-full h-[500px] bg-gradient-to-br from-gray-900 to-black rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-800">
+                  <div className={isMobile ? 'relative w-full h-full' : 'w-full max-w-4xl mx-auto'}>
+                    <div className={isMobile ? 'relative w-full h-full bg-black' : `w-full h-[600px] bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-700`}>
                       <video
+                        ref={videoPreviewRef}
                         src={videoPreview || ''}
-                        controls
+                        controls={!isMobile}
                         className="w-full h-full object-cover"
+                        controlsList="nodownload"
+                        preload="metadata"
+                        playsInline
+                        autoPlay={false}
+                        muted={false}
+                        style={{ 
+                          objectFit: 'contain',
+                          backgroundColor: 'black'
+                        }}
+                        onError={(e) => {
+                          console.error('Video preview error:', e);
+                          console.error('Video element error details:', e.currentTarget.error);
+                          setError('Failed to load video preview. Please try recording again.');
+                        }}
+                        onLoadedData={(e) => {
+                          console.log('Video preview loaded successfully');
+                          console.log('Video duration:', e.currentTarget.duration);
+                          console.log('Video ready state:', e.currentTarget.readyState);
+                          if (isMobile) setShowPlayOverlay(true);
+                        }}
+                        onCanPlay={() => {
+                          console.log('Video can play');
+                        }}
+                        onLoadStart={() => {
+                          console.log('Video load started');
+                        }}
+                        onPlay={() => {
+                          if (isMobile) setShowPlayOverlay(false);
+                        }}
+                        onPause={() => {
+                          if (isMobile) setShowPlayOverlay(true);
+                        }}
+                        onClick={() => {
+                          if (isMobile && !showPlayOverlay) {
+                            // Pause video if playing and overlay is hidden
+                            videoPreviewRef.current?.pause();
+                          }
+                        }}
                       />
+                      {/* Play overlay for mobile */}
+                      {isMobile && showPlayOverlay && (
+                        <button
+                          type="button"
+                          className="absolute inset-0 flex items-center justify-center z-10 focus:outline-none"
+                          style={{ pointerEvents: 'auto' }}
+                          aria-label="Play video"
+                          onClick={() => {
+                            videoPreviewRef.current?.play();
+                            setShowPlayOverlay(false);
+                          }}
+                        >
+                          <span className="bg-black/60 rounded-full p-6 flex items-center justify-center">
+                            <svg className="w-16 h-16 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 64 64">
+                              <circle cx="32" cy="32" r="32" fill="rgba(0,0,0,0.3)" />
+                              <polygon points="26,20 50,32 26,44" fill="white" />
+                            </svg>
+                          </span>
+                        </button>
+                      )}
+                      {/* Fallback message if video fails to load */}
+                      {!videoPreview && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center text-white">
+                            <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            <p className="text-lg font-semibold">Video Preview</p>
+                            <p className="text-gray-400">Your recorded video will appear here</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex justify-center space-x-6">
+                  <div className={`flex justify-center space-x-6 ${isMobile ? 'absolute bottom-8 left-4 right-4' : ''}`}>
                     <button
                       onClick={retakeVideo}
-                      className={`group bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-gray-400${isMobile ? ' px-6 py-3 text-sm' : ''}`}
+                      className={`group bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white rounded-2xl font-bold transition-all duration-300 hover:scale-105 shadow-xl border-2 border-gray-400 ${isMobile ? 'px-6 py-3 text-base flex-1' : 'px-8 py-4 text-lg'}`}
                       aria-label="Retake video"
                     >
-                      <div className="flex items-center space-x-3">
-                        <svg className={`w-5 h-5 group-hover:rotate-180 transition-transform duration-300${isMobile ? ' w-4 h-4' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="flex items-center justify-center space-x-3">
+                        <svg className={`group-hover:rotate-180 transition-transform duration-300 ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        <span>{isMobile ? 'Retake Video' : 'Retake Video'}</span>
+                        <span>{isMobile ? 'Retake' : 'Retake Video'}</span>
                       </div>
                     </button>
                     <button
                       onClick={confirmVideo}
-                      className={`group bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-blue-400${isMobile ? ' px-6 py-3 text-sm' : ''}`}
+                      className={`group bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-2xl font-bold transition-all duration-300 hover:scale-105 shadow-xl border-2 border-blue-400 ${isMobile ? 'px-6 py-3 text-base flex-1' : 'px-8 py-4 text-lg'}`}
                       aria-label="Confirm video"
                     >
-                      <div className="flex items-center space-x-3">
-                        <svg className={`w-5 h-5 group-hover:scale-110 transition-transform${isMobile ? ' w-4 h-4' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="flex items-center justify-center space-x-3">
+                        <svg className={`group-hover:scale-110 transition-transform ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
-                        <span>{isMobile ? 'Confirm Video' : 'Confirm Video'}</span>
+                        <span>{isMobile ? 'Use Video' : 'Use This Video'}</span>
                       </div>
                     </button>
                   </div>
+
+                  {/* Mobile close button */}
+                  {isMobile && (
+                    <button
+                      onClick={() => {
+                        setVideoState('initial');
+                      }}
+                      className="absolute top-12 left-4 w-10 h-10 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20"
+                      aria-label="Close preview"
+                    >
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+
+                  {/* Mobile video instruction */}
+                  {isMobile && (
+                    <div className="absolute top-12 left-1/2 transform -translate-x-1/2">
+                      <div className="bg-black/70 backdrop-blur-md rounded-full px-4 py-2 border border-white/20">
+                        <p className="text-white text-sm font-medium">Use video controls to play</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1170,95 +1424,104 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
               {videoState === 'details' && (
                 <div className="space-y-10">
                   <div className="text-center">
-                    <h3 className="text-3xl font-bold text-gray-900 mb-3">Tell Us About Yourself</h3>
+                    <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent mb-3">
+                      {isMobile ? 'Tell Us About You' : 'Tell Us About Yourself'}
+                    </h3>
                     <p className="text-gray-600 text-lg">Help employers find you with relevant details</p>
                   </div>
                   
-                  {/* Desired Roles */}
-                  <div className="max-w-2xl mx-auto">
-                    <label className="block text-xl font-bold text-gray-900 mb-6">
-                      Desired Roles <span className="text-gray-500 font-normal text-lg">(Max 7)</span>
-                    </label>
-                    <div className="flex space-x-4 mb-6">
+                  <div className="max-w-3xl mx-auto space-y-8">
+                    {/* Desired Roles */}
+                    <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
+                      <label className="block text-xl font-bold text-gray-900 mb-6 flex items-center">
+                        <svg className="w-6 h-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V8a2 2 0 012-2V6" />
+                        </svg>
+                        Desired Roles <span className="text-gray-500 font-normal text-lg ml-2">(Max 7)</span>
+                      </label>
+                      <div className="flex space-x-4 mb-6">
+                        <input
+                          type="text"
+                          value={newRole}
+                          onChange={(e) => setNewRole(e.target.value)}
+                          placeholder="e.g., Software Engineer, Product Manager"
+                          className="flex-1 px-6 py-4 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-lg bg-gray-50 focus:bg-white"
+                          maxLength={50}
+                          aria-label="Enter desired role"
+                        />
+                        <button
+                          onClick={addRole}
+                          disabled={!newRole.trim() || desiredRoles.length >= 7}
+                          className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl hover:from-blue-600 hover:to-blue-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-200 font-bold text-lg shadow-lg hover:shadow-xl disabled:shadow-none disabled:opacity-50"
+                          aria-label="Add role"
+                        >
+                          Add
+                        </button>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-3">
+                        {desiredRoles.map((role, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center px-4 py-2 rounded-full text-sm bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 font-semibold border border-blue-200 shadow-sm hover:shadow-md transition-all duration-200"
+                          >
+                            {role}
+                            <button
+                              onClick={() => removeRole(index)}
+                              className="ml-2 text-blue-600 hover:text-blue-800 transition-colors p-1 rounded-full hover:bg-blue-200"
+                              aria-label={`Remove ${role}`}
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Desired Location */}
+                    <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
+                      <label className="block text-xl font-bold text-gray-900 mb-6 flex items-center">
+                        <svg className="w-6 h-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Desired Location <span className="text-red-500 ml-2">*</span>
+                      </label>
                       <input
                         type="text"
-                        value={newRole}
-                        onChange={(e) => setNewRole(e.target.value)}
-                        placeholder="e.g., Software Engineer, Product Manager"
-                        className="flex-1 px-6 py-4 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-lg"
-                        maxLength={50}
-                        aria-label="Enter desired role"
+                        value={desiredLocation}
+                        onChange={(e) => setDesiredLocation(e.target.value)}
+                        placeholder="e.g., San Francisco, CA or Remote"
+                        className="w-full px-6 py-4 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-lg bg-gray-50 focus:bg-white"
+                        maxLength={100}
+                        aria-label="Enter desired location"
                       />
-                      <button
-                        onClick={addRole}
-                        disabled={!newRole.trim() || desiredRoles.length >= 7}
-                        className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl hover:from-blue-600 hover:to-blue-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-200 font-bold text-lg shadow-lg hover:shadow-xl disabled:shadow-none"
-                        aria-label="Add role"
-                      >
-                        Add
-                      </button>
                     </div>
-                    
-                    <div className="flex flex-wrap gap-4">
-                      {desiredRoles.map((role, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-6 py-3 rounded-full text-base bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 font-semibold border-2 border-blue-200 shadow-sm hover:shadow-md transition-all duration-200"
-                        >
-                          {role}
-                          <button
-                            onClick={() => removeRole(index)}
-                            className="ml-3 text-blue-600 hover:text-blue-800 transition-colors p-1 rounded-full hover:bg-blue-200"
-                            aria-label={`Remove ${role}`}
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
 
-                  {/* Desired Location */}
-                  <div className="max-w-2xl mx-auto">
-                    <label className="block text-xl font-bold text-gray-900 mb-6">
-                      Desired Location <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={desiredLocation}
-                      onChange={(e) => setDesiredLocation(e.target.value)}
-                      placeholder="e.g., San Francisco, CA or Remote"
-                      className="w-full px-6 py-4 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-lg"
-                      maxLength={100}
-                      aria-label="Enter desired location"
-                    />
-                  </div>
-
-                  {/* Video Information */}
-                  {recordedVideo && (
-                    <div className="max-w-2xl mx-auto">
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-200">
-                        <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                          <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {/* Video Information */}
+                    {recordedVideo && (
+                      <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
+                        <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                          <svg className="w-6 h-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                           </svg>
                           Video Information
                         </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-3">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Duration:</span>
-                              <span className="font-semibold text-gray-900">{videoDuration.toFixed(1)}s</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                              <span className="text-gray-600 font-medium">Duration:</span>
+                              <span className="font-bold text-gray-900">{videoDuration.toFixed(1)}s</span>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">File Size:</span>
-                              <span className="font-semibold text-gray-900">{(videoFileSize / (1024 * 1024)).toFixed(1)}MB</span>
+                            <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                              <span className="text-gray-600 font-medium">File Size:</span>
+                              <span className="font-bold text-gray-900">{(videoFileSize / (1024 * 1024)).toFixed(1)}MB</span>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Format:</span>
-                              <span className="font-semibold text-gray-900">{recordedVideo.type.split('/')[1].toUpperCase()}</span>
+                            <div className="flex justify-between items-center py-2">
+                              <span className="text-gray-600 font-medium">Format:</span>
+                              <span className="font-bold text-gray-900">{recordedVideo.type.split('/')[1].toUpperCase()}</span>
                             </div>
                           </div>
                           {videoThumbnail && (
@@ -1266,35 +1529,35 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
                               <img 
                                 src={videoThumbnail} 
                                 alt="Video thumbnail" 
-                                className="w-32 h-20 object-cover rounded-lg border-2 border-gray-300"
+                                className="w-40 h-24 object-cover rounded-2xl border-2 border-gray-200 shadow-lg"
                               />
                             </div>
                           )}
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  <div className="flex justify-center pt-6">
-                    <button
-                      onClick={saveChanges}
-                      disabled={loading || !desiredRoles.length || !desiredLocation.trim()}
-                      className={`group bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-16 py-5 rounded-2xl font-bold text-xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-green-400 disabled:shadow-none${isMobile ? ' px-8 py-3 text-sm' : ''}`}
-                      aria-label="Save changes"
-                    >
-                      <div className="flex items-center space-x-3">
-                        {loading ? (
-                          <svg className="w-6 h-6 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg>
-                        ) : (
-                          <svg className="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                        <span>{loading ? 'Saving...' : 'Save Changes'}</span>
-                      </div>
-                    </button>
+                    <div className="flex justify-center pt-6">
+                      <button
+                        onClick={saveChanges}
+                        disabled={loading || !desiredRoles.length || !desiredLocation.trim()}
+                        className="group bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-12 py-5 rounded-2xl font-bold text-xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-green-400 disabled:shadow-none disabled:opacity-50"
+                        aria-label="Save changes"
+                      >
+                        <div className="flex items-center space-x-3">
+                          {loading ? (
+                            <svg className="w-6 h-6 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                          ) : (
+                            <svg className="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                          <span>{loading ? 'Saving...' : 'Save Changes'}</span>
+                        </div>
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

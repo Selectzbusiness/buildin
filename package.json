@@ -11,7 +11,8 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d build",
+    "clear-cache": "node clear-cache.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
@@ -51,8 +52,8 @@
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",
     "@types/marked": "^5.0.2",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "@types/uuid": "^10.0.0",
     "gh-pages": "^6.3.0",
     "supabase": "^2.24.3",

@@ -114,14 +114,13 @@ const Login: React.FC = () => {
       setSuccess('Login successful! Redirecting...');
       setLoading(false);
 
-      setTimeout(() => {
-        if (formData.role === 'employer') {
-          // Check if user has company profile, if not redirect to company details
-          navigate('/employer/company-details');
-        } else {
-          navigate('/');
-        }
-      }, 1000);
+      // Navigate based on the selected role - immediate redirect to fix mobile issue
+      if (formData.role === 'employer') {
+        // Check if user has company profile, if not redirect to company details
+        navigate('/employer/company-details');
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {

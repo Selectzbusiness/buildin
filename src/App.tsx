@@ -92,23 +92,6 @@ const RoleProtectedRoute: React.FC<{
   return <>{children}</>;
 };
 
-// Root route component to handle initial routing
-const RootRoute: React.FC = () => {
-  const { user, profile } = useContext(AuthContext);
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-  // If user has employer role, redirect to employer dashboard
-  if (profile?.roles?.includes('employer')) {
-    return <Navigate to="/employer/dashboard" />;
-  }
-  // If user has jobseeker role, redirect to home
-  if (profile?.roles?.includes('jobseeker')) {
-    return <Navigate to="/" />;
-  }
-  return <Navigate to="/" />;
-};
-
 const App: React.FC = () => {
   return (
     <AuthProvider>
@@ -142,8 +125,7 @@ const App: React.FC = () => {
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            {/* Root route */}
-            <Route path="/" element={<RootRoute />} />
+            
             {/* Main layout routes (for jobseekers) */}
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Home />} />
@@ -171,6 +153,7 @@ const App: React.FC = () => {
                 <Route path="help" element={<HelpCenter />} />
                 <Route path="about" element={<AboutUs />} />
             </Route>
+            
             {/* Employer routes */}
             <Route
               path="/employer"
@@ -208,6 +191,7 @@ const App: React.FC = () => {
                 <Route path="help" element={<HelpCenter />} />
                 <Route path="about" element={<AboutUs />} />
             </Route>
+            
             {/* 404 Route */}
             <Route path="*" element={<NotFound />} />
           </Routes>

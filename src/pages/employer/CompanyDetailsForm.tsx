@@ -78,6 +78,12 @@ const CompanyDetailsForm: React.FC = () => {
         return;
       }
 
+      if (companyInfo.name.trim().length < 2) {
+        setError('Company name must be at least 2 characters long');
+        setSaving(false);
+        return;
+      }
+
       const { error: insertError } = await supabase
         .from('companies')
         .insert([{
@@ -97,7 +103,7 @@ const CompanyDetailsForm: React.FC = () => {
         return;
       }
 
-      toast.success('Company profile saved successfully!');
+      toast.success('Company profile saved successfully! Welcome to Selectz Employer Portal!');
       navigate('/employer/dashboard');
     } catch (err) {
       console.error('Error in handleSubmit:', err);
@@ -129,8 +135,17 @@ const CompanyDetailsForm: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           <div className="p-8">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Complete Your Company Profile</h1>
-              <p className="text-gray-600">Please provide your company details to access employer features.</p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome to Selectz Employer Portal!</h1>
+              <p className="text-gray-600 mb-4">To start posting jobs and accessing employer features, please complete your company profile first.</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-left">
+                <h3 className="font-semibold text-blue-900 mb-2">Why is this required?</h3>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Helps candidates understand your company better</li>
+                  <li>• Required for posting jobs and internships</li>
+                  <li>• Builds trust with potential candidates</li>
+                  <li>• Only takes a few minutes to complete</li>
+                </ul>
+              </div>
             </div>
 
             {error && (

@@ -1,3 +1,4 @@
+# Handle client-side routing
 /*    /index.html   200
 
 # Specific redirects for common routes
@@ -5,4 +6,14 @@
 /internships/*    /index.html   200
 /employer/*    /index.html   200
 /jobseeker/*    /index.html   200
-/auth/*    /index.html   200 
+/auth/*    /index.html   200
+/companies/*    /index.html   200
+/careers/*    /index.html   200
+/contact/*    /index.html   200
+/about/*    /index.html   200
+/privacy/*    /index.html   200
+/terms/*    /index.html   200
+/help/*    /index.html   200
+
+# Handle static assets
+/static/*    /static/:splat   200 

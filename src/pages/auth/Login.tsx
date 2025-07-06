@@ -21,6 +21,7 @@ const Login: React.FC = () => {
     setLoading(true);
     setError(null);
     setSuccess(null);
+    console.log('Login started');
     try {
       if (!formData.email || !formData.password) {
         setError('Please fill in all required fields');
@@ -28,10 +29,12 @@ const Login: React.FC = () => {
         return;
       }
       // Login with Supabase Auth
+      console.log('Before supabase.auth.signInWithPassword');
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
+      console.log('After supabase.auth.signInWithPassword', { data, error });
       if (error || !data.session) {
         setError('Invalid email or password.');
         setLoading(false);
@@ -122,9 +125,11 @@ const Login: React.FC = () => {
         navigate('/');
       }
     } catch (err: any) {
+      console.log('Login error', err);
       setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
+      console.log('Login finished');
     }
   };
 

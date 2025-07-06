@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { cookieStorage } from '../utils/cookieStorage';
 
 // Get environment variables
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL
@@ -22,7 +23,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true,
     storageKey: 'job-connect-auth',
-    storage: window.localStorage
+    storage: cookieStorage,
   },
   db: {
     schema: 'public'

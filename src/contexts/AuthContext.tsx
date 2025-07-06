@@ -74,6 +74,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Wait for Supabase to restore the session from localStorage
     const restoreSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('Restored session:', session);
       setUser(session?.user ?? null);
       if (session?.user) {
         await fetchProfile(session.user.id);

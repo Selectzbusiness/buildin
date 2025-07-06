@@ -18,6 +18,8 @@ import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import JobDetails from './pages/jobseeker/JobDetails';
 import InternshipDetails from './pages/jobseeker/InternshipDetails';
+import JobApplication from './pages/jobseeker/JobApplication';
+import InternshipApplication from './pages/jobseeker/InternshipApplication';
 import JobseekerProfile from './pages/jobseeker/JobseekerProfile';
 import JobseekerDashboard from './pages/JobseekerDashboard';
 import JobseekerSettings from './pages/JobseekerSettings';
@@ -111,7 +113,7 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <FavoritesProvider>
-      <JobsProvider>
+        <JobsProvider>
           <Toaster 
             position="top-right"
             toastOptions={{
@@ -136,78 +138,80 @@ const App: React.FC = () => {
               },
             }}
           />
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          {/* Root route */}
-          <Route path="/" element={<RootRoute />} />
-          {/* Main layout routes (for jobseekers) */}
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<Home />} />
-            <Route path="jobs" element={<Jobs />} />
-            <Route path="internships" element={<Internships />} />
-            <Route path="jobs/:id" element={<JobDetails />} />
-            <Route path="internships/:id" element={<InternshipDetails />} />
-            <Route path="profile" element={<JobseekerProfile />} />
-            <Route path="settings" element={
-              <RoleProtectedRoute allowedRole="jobseeker">
-                <JobseekerSettings />
-              </RoleProtectedRoute>
-            } />
-            <Route path="my-jobs" element={<MyJobs />} />
-            <Route path="favourites" element={<Favourites />} />
-            <Route path="inbox" element={<RoleProtectedRoute allowedRole="jobseeker"><Inbox /></RoleProtectedRoute>} />
-              
-              {/* Footer Pages */}
-              <Route path="careers" element={<Careers />} />
-              <Route path="terms" element={<TermsOfService />} />
-              <Route path="privacy" element={<PrivacyPolicy />} />
-              <Route path="contact" element={<ContactUs />} />
-              <Route path="help" element={<HelpCenter />} />
-              <Route path="about" element={<AboutUs />} />
-          </Route>
-          {/* Employer routes */}
-          <Route
-            path="/employer"
-            element={
-              <RoleProtectedRoute allowedRole="employer">
-                <EmployerLayout />
-              </RoleProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<EmployerDashboard />} />
-            <Route path="jobs" element={<PostedJobs />} />
-            <Route path="internships" element={<PostedInternships />} />
-            <Route path="applications" element={<Applications />} />
-            <Route path="billing" element={<Billing />} />
-            <Route path="analytics" element={<Analytics />} />
-            <Route path="profile" element={<EmployerProfile />} />
-            <Route path="settings" element={<EmployerSettings />} />
-              <Route path="post-job" element={<ModernMultiStepJobForm />} />
-            <Route path="posted-jobs" element={<PostedJobs />} />
-              <Route path="post-internship" element={<ModernMultiStepInternshipForm />} />
-            <Route path="posted-internships" element={<PostedInternships />} />
-            <Route path="company-details" element={<CompanyDetailsForm />} />
-            <Route path="job-seeker-profile/:id" element={<EmployerJobSeekerProfileView />} />
-            <Route path="reels" element={<JobSeekerReels />} />
-            <Route path="saved-videos" element={<SavedJobSeekerVideos />} />
-            <Route path="credits" element={<Credits />} />
-            <Route path="inbox" element={<RoleProtectedRoute allowedRole="employer"><MessagingSystem currentRole="employer" /></RoleProtectedRoute>} />
-              
-              {/* Footer Pages */}
-              <Route path="careers" element={<Careers />} />
-              <Route path="terms" element={<TermsOfService />} />
-              <Route path="privacy" element={<PrivacyPolicy />} />
-              <Route path="contact" element={<ContactUs />} />
-              <Route path="help" element={<HelpCenter />} />
-              <Route path="about" element={<AboutUs />} />
-          </Route>
-          {/* 404 Route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </JobsProvider>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            {/* Root route */}
+            <Route path="/" element={<RootRoute />} />
+            {/* Main layout routes (for jobseekers) */}
+            <Route path="/" element={<MainLayout />}>
+              <Route index element={<Home />} />
+              <Route path="jobs" element={<Jobs />} />
+              <Route path="internships" element={<Internships />} />
+              <Route path="jobs/:id" element={<JobDetails />} />
+              <Route path="jobs/:id/apply" element={<JobApplication />} />
+              <Route path="internships/:id" element={<InternshipDetails />} />
+              <Route path="internships/:id/apply" element={<InternshipApplication />} />
+              <Route path="profile" element={<JobseekerProfile />} />
+              <Route path="settings" element={
+                <RoleProtectedRoute allowedRole="jobseeker">
+                  <JobseekerSettings />
+                </RoleProtectedRoute>
+              } />
+              <Route path="my-jobs" element={<MyJobs />} />
+              <Route path="favourites" element={<Favourites />} />
+              <Route path="inbox" element={<RoleProtectedRoute allowedRole="jobseeker"><Inbox /></RoleProtectedRoute>} />
+                
+                {/* Footer Pages */}
+                <Route path="careers" element={<Careers />} />
+                <Route path="terms" element={<TermsOfService />} />
+                <Route path="privacy" element={<PrivacyPolicy />} />
+                <Route path="contact" element={<ContactUs />} />
+                <Route path="help" element={<HelpCenter />} />
+                <Route path="about" element={<AboutUs />} />
+            </Route>
+            {/* Employer routes */}
+            <Route
+              path="/employer"
+              element={
+                <RoleProtectedRoute allowedRole="employer">
+                  <EmployerLayout />
+                </RoleProtectedRoute>
+              }
+            >
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<EmployerDashboard />} />
+              <Route path="jobs" element={<PostedJobs />} />
+              <Route path="internships" element={<PostedInternships />} />
+              <Route path="applications" element={<Applications />} />
+              <Route path="billing" element={<Billing />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="profile" element={<EmployerProfile />} />
+              <Route path="settings" element={<EmployerSettings />} />
+                <Route path="post-job" element={<ModernMultiStepJobForm />} />
+              <Route path="posted-jobs" element={<PostedJobs />} />
+                <Route path="post-internship" element={<ModernMultiStepInternshipForm />} />
+              <Route path="posted-internships" element={<PostedInternships />} />
+              <Route path="company-details" element={<CompanyDetailsForm />} />
+              <Route path="job-seeker-profile/:id" element={<EmployerJobSeekerProfileView />} />
+              <Route path="reels" element={<JobSeekerReels />} />
+              <Route path="saved-videos" element={<SavedJobSeekerVideos />} />
+              <Route path="credits" element={<Credits />} />
+              <Route path="inbox" element={<RoleProtectedRoute allowedRole="employer"><MessagingSystem currentRole="employer" /></RoleProtectedRoute>} />
+                
+                {/* Footer Pages */}
+                <Route path="careers" element={<Careers />} />
+                <Route path="terms" element={<TermsOfService />} />
+                <Route path="privacy" element={<PrivacyPolicy />} />
+                <Route path="contact" element={<ContactUs />} />
+                <Route path="help" element={<HelpCenter />} />
+                <Route path="about" element={<AboutUs />} />
+            </Route>
+            {/* 404 Route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </JobsProvider>
       </FavoritesProvider>
     </AuthProvider>
   );

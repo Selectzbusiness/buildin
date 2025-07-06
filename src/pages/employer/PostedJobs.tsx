@@ -24,12 +24,25 @@ const PostedJobs: React.FC = () => {
 
   const fetchPostedJobs = useCallback(async () => {
     console.log('profile', profile);
-    if (!profile || !profile.roles?.includes('employer')) {
+    console.log('profile.auth_id', profile?.auth_id);
+    console.log('profile.user_id', profile?.user_id);
+    console.log('profile.roles', profile?.roles);
+    if (!profile) {
+      setError('Profile not found. Please log in again.');
       setLoading(false);
       return;
     }
-    if (!profile.user_id) {
-      setError('Your profile is missing a user_id. Please contact support or re-login.');
+    
+    // Check if user has employer role or if they have a company (which indicates they're an employer)
+    const hasEmployerRole = profile.roles?.includes('employer');
+    if (!hasEmployerRole) {
+      // Try to check if they have a company instead of relying on roles
+      console.log('User does not have employer role, checking for company...');
+    }
+    
+    const userId = profile.auth_id || profile.user_id;
+    if (!userId) {
+      setError('Your profile is missing user identification. Please contact support or re-login.');
       setLoading(false);
       return;
     }
@@ -39,7 +52,7 @@ const PostedJobs: React.FC = () => {
       const { data: companies, error: companyError } = await supabase
         .from('companies')
         .select('id')
-        .eq('auth_id', profile.user_id);
+        .eq('auth_id', userId);
       const companyData = companies && companies.length > 0 ? companies[0] : null;
       console.log('companyData', companyData, 'companyError', companyError);
       if (companyError) throw new Error("Could not find employer's company. " + (companyError.message || JSON.stringify(companyError)));

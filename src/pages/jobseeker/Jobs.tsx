@@ -74,8 +74,8 @@ const Jobs: React.FC = () => {
   const [showMobileSearchModal, setShowMobileSearchModal] = useState(false);
 
   useEffect(() => {
-    fetchJobs();
-  }, [fetchJobs]);
+    if (jobs.length === 0 && !loading) fetchJobs();
+  }, [fetchJobs, jobs.length, loading]);
 
   // Unique filter options
   const uniqueLocations = Array.from(new Set(jobs.map(job => job.location?.city).filter((city): city is string => Boolean(city))));
@@ -110,24 +110,36 @@ const Jobs: React.FC = () => {
   });
 
   // Transform jobs to match JobCardNew interface
-  const transformedJobs: JobCardJob[] = sortedJobs.map(job => ({
-    id: job.id,
-    title: job.title,
-    company: job.company?.name || 'Unknown Company',
-    location: job.location,
-    type: job.job_type,
-    salary: job.amount && job.pay_rate ? `${job.amount} / ${job.pay_rate}` : 'Salary not specified',
-    description: job.description,
-    postedDate: job.created_at,
-    requirements: [], // Add requirements if available in your database
-    status: job.status as 'active' | 'paused' | 'closed' | 'expired',
-    experience: job.experience_level || 'Experience not specified',
-    companies: job.company ? {
-      name: job.company.name,
-      logo_url: job.company.logo_url || ''
-    } : undefined,
-    companyLogo: job.company?.logo_url
-  }));
+  const transformedJobs: JobCardJob[] = sortedJobs.map(job => {
+    const amount = typeof job.amount === 'number' ? job.amount : 0;
+    const min_amount = typeof job.min_amount === 'number' ? job.min_amount : 0;
+    const max_amount = typeof job.max_amount === 'number' ? job.max_amount : 0;
+    const pay_rate = typeof job.pay_rate === 'string' ? job.pay_rate : '';
+    let salary = 'Salary not specified';
+    if (min_amount && max_amount && min_amount !== max_amount) {
+      salary = `₹${min_amount} - ₹${max_amount}${pay_rate ? ' / ' + pay_rate : ''}`;
+    } else if (amount) {
+      salary = `₹${amount}${pay_rate ? ' / ' + pay_rate : ''}`;
+    }
+    return {
+      id: job.id,
+      title: job.title,
+      company: job.company?.name || 'Unknown Company',
+      location: job.location,
+      type: job.job_type,
+      salary,
+      description: job.description,
+      postedDate: job.created_at,
+      requirements: [], // Add requirements if available in your database
+      status: job.status as 'active' | 'paused' | 'closed' | 'expired',
+      experience: job.experience_level || 'Experience not specified',
+      companies: job.company ? {
+        name: job.company.name,
+        logo_url: job.company.logo_url || ''
+      } : undefined,
+      companyLogo: job.company?.logo_url
+    };
+  });
 
   // For mobile: show selected filters as chips
   const filterChips = Object.entries(filters).filter(([_, v]) => v).map(([k, v]) => `${k}: ${v}`);
@@ -283,6 +295,7 @@ const Jobs: React.FC = () => {
           </div>
         </div>
       )}
+      {error && <div className="text-red-500 text-center mt-4">{error} <button onClick={fetchJobs} className="underline text-blue-600">Retry</button></div>}
     </div>
   );
 };

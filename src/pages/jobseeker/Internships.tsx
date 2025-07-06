@@ -71,17 +71,8 @@ const Internships: React.FC = () => {
   const [showMobileSearchModal, setShowMobileSearchModal] = useState(false);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        console.log('Attempting to fetch internships...');
-        await fetchInternships();
-        console.log('Fetch internships completed.');
-      } catch (err) {
-        console.error('Error loading internships in Internships.tsx:', err);
-      }
-    };
-    loadData();
-  }, [fetchInternships]);
+    if (internships.length === 0 && !loading) fetchInternships();
+  }, [fetchInternships, internships.length, loading]);
 
   // Unique filter options
   const uniqueLocations = Array.from(new Set(internships.map(internship => internship.location?.city).filter((city): city is string => Boolean(city))));

@@ -79,49 +79,59 @@ export const JobsProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       setError(null);
-
+      console.log('Fetching jobs...');
       const { data, error: fetchError } = await supabase
         .from('jobs')
         .select(`
           *,
           companies (
+            id,
             name,
             logo_url
           )
         `)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
-
+      console.log('Supabase jobs response:', { data, fetchError });
       if (fetchError) {
         throw fetchError;
       }
-
-      const transformedJobs = (data || []).map(job => ({
-        id: job.id,
-        title: job.title,
-        description: job.description,
-        job_type: job.job_type,
-        location: {
-          city: job.location?.city || '',
-          area: job.location?.area || '',
-        },
-        pay_type: job.pay_type,
-        min_amount: job.min_amount,
-        max_amount: job.max_amount,
-        amount: job.amount,
-        pay_rate: job.pay_rate,
-        status: job.status,
-        created_at: job.created_at,
-        company: job.companies ? { id: job.companies.id, name: job.companies.name, logo_url: job.companies.logo_url } : undefined,
-        experience_level: job.experience_level
-      }));
-
+      if (!data) {
+        throw new Error('No data returned from jobs fetch');
+      }
+      console.log('Raw jobs data from database:', data);
+      const transformedJobs = (data || []).map(job => {
+        console.log('Processing job:', job);
+        console.log('Job location:', job.location);
+        console.log('Job company:', job.companies);
+        return {
+          id: job.id,
+          title: job.title,
+          description: job.description,
+          job_type: job.job_type,
+          location: {
+            city: job.location?.city || '',
+            area: job.location?.area || '',
+          },
+          pay_type: job.pay_type,
+          min_amount: job.min_amount,
+          max_amount: job.max_amount,
+          amount: job.amount,
+          pay_rate: job.pay_rate,
+          status: job.status,
+          created_at: job.created_at,
+          company: job.companies ? { id: job.companies.id, name: job.companies.name, logo_url: job.companies.logo_url } : { id: '', name: 'Unknown Company', logo_url: '' },
+          experience_level: job.experience_level
+        };
+      });
+      console.log('Transformed jobs:', transformedJobs);
       setJobs(transformedJobs);
     } catch (err) {
       console.error('Error fetching jobs:', err);
       setError(err instanceof Error ? err.message : 'An error occurred while fetching jobs');
     } finally {
       setLoading(false);
+      console.log('Jobs loading set to false');
     }
   }, []);
 
@@ -129,7 +139,7 @@ export const JobsProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       setError(null);
-
+      console.log('Fetching internships...');
       const { data, error: fetchError } = await supabase
         .from('internships')
         .select(`
@@ -142,38 +152,47 @@ export const JobsProvider: React.FC<{ children: React.ReactNode }> = ({ children
         `)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
-
+      console.log('Supabase internships response:', { data, fetchError });
       if (fetchError) {
         throw fetchError;
       }
-
-      const transformedInternships = (data || []).map(internship => ({
-        id: internship.id,
-        title: internship.title,
-        description: internship.description,
-        internship_type: internship.internship_type,
-        location: {
-          city: internship.location?.city || '',
-          area: internship.location?.area || '',
-        },
-        stipend_type: internship.stipend_type,
-        min_amount: internship.min_amount,
-        max_amount: internship.max_amount,
-        amount: internship.amount,
-        pay_rate: internship.pay_rate,
-        duration: internship.duration,
-        status: internship.status,
-        created_at: internship.created_at,
-        company: internship.companies ? { id: internship.companies.id, name: internship.companies.name, logo_url: internship.companies.logo_url } : undefined,
-        experience_level: internship.experience_level
-      }));
-
+      if (!data) {
+        throw new Error('No data returned from internships fetch');
+      }
+      console.log('Raw internships data from database:', data);
+      const transformedInternships = (data || []).map(internship => {
+        console.log('Processing internship:', internship);
+        console.log('Internship location:', internship.location);
+        console.log('Internship stipend:', internship.stipend);
+        console.log('Internship company:', internship.companies);
+        return {
+          id: internship.id,
+          title: internship.title,
+          description: internship.description,
+          internship_type: internship.type,
+          location: {
+            city: internship.location?.city || '',
+            area: internship.location?.area || '',
+          },
+          stipend_type: internship.stipend?.type || '',
+          min_amount: internship.stipend?.min || internship.stipend?.amount || 0,
+          max_amount: internship.stipend?.max || internship.stipend?.amount || 0,
+          amount: internship.stipend?.amount || internship.stipend?.min || 0,
+          pay_rate: internship.stipend?.frequency || '',
+          duration: internship.duration,
+          status: internship.status,
+          created_at: internship.created_at,
+          company: internship.companies ? { id: internship.companies.id, name: internship.companies.name, logo_url: internship.companies.logo_url } : { id: '', name: 'Unknown Company', logo_url: '' }
+        };
+      });
+      console.log('Transformed internships:', transformedInternships);
       setInternships(transformedInternships);
     } catch (err) {
       console.error('Error fetching internships:', err);
       setError(err instanceof Error ? err.message : 'An error occurred while fetching internships');
     } finally {
       setLoading(false);
+      console.log('Internships loading set to false');
     }
   }, []);
 

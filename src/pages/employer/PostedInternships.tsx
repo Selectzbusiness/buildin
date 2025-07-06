@@ -22,7 +22,27 @@ const PostedInternships: React.FC = () => {
   const { profile } = useContext(AuthContext);
 
   const fetchPostedInternships = useCallback(async () => {
-    if (!profile || !profile.roles?.includes('employer')) {
+    console.log('profile', profile);
+    console.log('profile.auth_id', profile?.auth_id);
+    console.log('profile.user_id', profile?.user_id);
+    console.log('profile.roles', profile?.roles);
+    
+    if (!profile) {
+      setError('Profile not found. Please log in again.');
+      setLoading(false);
+      return;
+    }
+    
+    // Check if user has employer role or if they have a company (which indicates they're an employer)
+    const hasEmployerRole = profile.roles?.includes('employer');
+    if (!hasEmployerRole) {
+      // Try to check if they have a company instead of relying on roles
+      console.log('User does not have employer role, checking for company...');
+    }
+    
+    const userId = profile.auth_id || profile.user_id;
+    if (!userId) {
+      setError('Your profile is missing user identification. Please contact support or re-login.');
       setLoading(false);
       return;
     }
@@ -33,7 +53,7 @@ const PostedInternships: React.FC = () => {
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('id')
-        .eq('auth_id', profile.auth_id)
+        .eq('auth_id', userId)
         .single();
 
       if (companyError) throw new Error("Could not find employer's company.");

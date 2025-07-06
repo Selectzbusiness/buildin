@@ -84,12 +84,7 @@ const MainLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#f1f5f9] flex flex-col">
       {/* Header with logo for desktop only */}
-      {!isMobile && (
-        <div className="w-full flex items-center pt-6 pb-2 px-8">
-          <img src="/selectz-logo.png" alt="Selectz Logo" className="w-10 h-10 mr-3" style={{objectFit: 'contain'}} />
-          <span className="text-2xl font-extrabold tracking-tight select-none" style={{color: '#185a9d', letterSpacing: '0.01em'}}>Selectz</span>
-        </div>
-      )}
+      {/* Removed duplicate logo/text block here */}
       {/* Navigation - Hidden on mobile */}
       <nav className="bg-white shadow-lg fixed w-full z-20 backdrop-blur-md rounded-b-2xl border-b border-[#e3f0fa] hidden md:block">
         <div className="w-full flex justify-center">
@@ -97,6 +92,12 @@ const MainLayout: React.FC = () => {
             <div className="flex items-center">
               {/* Logo */}
               <div className="flex-shrink-0 flex items-center">
+                <img
+                  src="/selectz.logo.png"
+                  alt="Selectz Logo"
+                  className="w-8 h-8 mr-2 object-contain rounded-xl bg-white/20 backdrop-blur-sm shadow"
+                  style={{ background: 'rgba(24,90,157,0.08)' }}
+                />
                 <Link to="/" className="text-3xl font-bold text-[#185a9d] tracking-tight hover:text-[#43cea2] transition-colors duration-200">
                   Selectz
                 </Link>

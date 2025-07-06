@@ -69,7 +69,13 @@ const EmployerLayout: React.FC = () => {
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center space-x-4">
-              <div>
+              <div className="flex items-center">
+                <img
+                  src="/selectz.logo.png"
+                  alt="Selectz Logo"
+                  className="w-8 h-8 mr-2 object-contain rounded-xl bg-white/20 backdrop-blur-sm shadow"
+                  style={{ background: 'rgba(24,90,157,0.08)' }}
+                />
                 <Link to="/employer" className="text-3xl font-bold text-[#185a9d] tracking-tight hover:text-[#43cea2] transition-colors duration-200">
                   Selectz
                 </Link>

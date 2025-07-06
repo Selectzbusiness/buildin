@@ -5,9 +5,18 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../config/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import DraftManager from './DraftManager';
+import CustomQuestionsManager from './CustomQuestionsManager';
 import toast from 'react-hot-toast';
 
 // Placeholder for all the field types from JobFormData
+interface CustomQuestion {
+  id: string;
+  question: string;
+  type: 'text' | 'textarea' | 'radio' | 'checkbox';
+  required: boolean;
+  options?: string[];
+}
+
 interface JobFormData {
   jobTitle: string;
   jobTitleDescription: string;
@@ -45,7 +54,7 @@ interface JobFormData {
   jobProfileDescription: string;
   notificationEmails: string;
   applicationDeadline: string;
-  // ...other fields for next steps
+  customQuestions: CustomQuestion[];
 }
 
 const EMPLOYMENT_TYPES = [
@@ -86,6 +95,7 @@ const steps = [
   { label: 'Employment & Schedule', icon: <FaClipboardList /> },
   { label: 'Compensation', icon: <FaMoneyBillWave /> },
   { label: 'Requirements', icon: <FaUserTie /> },
+  { label: 'Custom Questions', icon: <FaFileAlt /> },
   { label: 'Preview & Submit', icon: <FaRegCalendarAlt /> },
 ];
 
@@ -126,6 +136,7 @@ const initialFormData: JobFormData = {
   jobProfileDescription: '',
   notificationEmails: '',
   applicationDeadline: '',
+  customQuestions: [],
 };
 
 const ModernMultiStepJobForm: React.FC = () => {
@@ -304,6 +315,7 @@ const ModernMultiStepJobForm: React.FC = () => {
       jobProfileDescription: draft.jobProfileDescription || '',
       notificationEmails: draft.notificationEmails || '',
       applicationDeadline: draft.applicationDeadline || '',
+      customQuestions: draft.customQuestions || [],
     });
     setStep(draft.current_step || 0);
     setHasUnsavedChanges(true);
@@ -1029,8 +1041,25 @@ const ModernMultiStepJobForm: React.FC = () => {
     </div>
   );
 
-  // Step 5 UI - Preview & Submit
+  // Step 5 UI - Custom Questions
   const renderStep5 = () => (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+          <FaFileAlt className="text-indigo-600" /> Custom Application Questions
+        </h2>
+        <p className="text-gray-500 mb-4">Add custom questions to gather specific information from applicants.</p>
+      </div>
+
+      <CustomQuestionsManager
+        questions={formData.customQuestions}
+        onChange={(questions) => setFormData(prev => ({ ...prev, customQuestions: questions }))}
+      />
+    </div>
+  );
+
+  // Step 6 UI - Preview & Submit
+  const renderStep6 = () => (
     <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
@@ -1345,40 +1374,37 @@ const ModernMultiStepJobForm: React.FC = () => {
         company_id: companyData.id,
         title: formData.jobTitle.trim(),
         description: formData.jobTitleDescription.trim(),
-        type: formData.jobType,
-        location: `${formData.city}, ${formData.area}`.trim(),
-        pincode: formData.pincode,
-        street_address: formData.streetAddress,
+        job_type: formData.jobType,
+        location: {
+          city: formData.city,
+          area: formData.area,
+          pincode: formData.pincode,
+          street_address: formData.streetAddress
+        },
         employment_types: formData.employmentTypes,
         schedules: formData.schedules,
         custom_schedule: formData.customSchedule,
         planned_start_date: formData.hasPlannedStartDate ? new Date(formData.plannedStartDate).toISOString() : null,
-        number_of_hires: formData.numberOfHires === 'custom' ? formData.customNumberOfHires : formData.numberOfHires,
+        openings: formData.numberOfHires === 'custom' ? parseInt(formData.customNumberOfHires) : parseInt(formData.numberOfHires),
         recruitment_timeline: formData.recruitmentTimeline,
         pay_type: formData.payType,
-        min_pay: formData.minPay,
-        max_pay: formData.maxPay,
+        min_amount: parseFloat(formData.minPay) || null,
+        max_amount: parseFloat(formData.maxPay) || null,
         pay_rate: formData.payRate,
         supplemental_pay: formData.supplementalPay,
         custom_supplemental_pay: formData.customSupplementalPay,
         benefits: formData.benefits,
-        custom_benefits: formData.customBenefits,
-        education: formData.education,
-        languages: formData.language,
-        custom_language: formData.customLanguage,
-        experience: formData.experience,
+        custom_benefit: formData.customBenefits,
+        minimum_education: formData.education,
+        language_requirement: formData.language.join(', '),
+        experience_type: formData.experience,
         industries: formData.industries,
-        custom_industry: formData.customIndustry,
-        age_preference: formData.age,
-        gender_preference: formData.gender,
+        gender: formData.gender,
         skills: formData.skills,
-        custom_skills: formData.customSkills,
         job_profile_description: formData.jobProfileDescription,
-        notification_emails: formData.notificationEmails,
+        notification_emails: [formData.notificationEmails],
         application_deadline: formData.applicationDeadline ? new Date(formData.applicationDeadline).toISOString() : null,
-        status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        status: 'active'
       };
 
       // Insert the job
@@ -1463,11 +1489,12 @@ const ModernMultiStepJobForm: React.FC = () => {
           transition={{ duration: 0.4 }}
           className="bg-white rounded-2xl shadow-2xl p-8 mb-8"
         >
-          {step === 0 && renderStep1()}
-          {step === 1 && renderStep2()}
-          {step === 2 && renderStep3()}
-          {step === 3 && renderStep4()}
-          {step === 4 && renderStep5()}
+                      {step === 0 && renderStep1()}
+            {step === 1 && renderStep2()}
+            {step === 2 && renderStep3()}
+            {step === 3 && renderStep4()}
+            {step === 4 && renderStep5()}
+            {step === 5 && renderStep6()}
         </motion.div>
       </AnimatePresence>
 
@@ -1491,10 +1518,10 @@ const ModernMultiStepJobForm: React.FC = () => {
         ) : (
           <button
             className="px-6 py-2 rounded-full bg-green-600 text-white font-semibold flex items-center gap-2 shadow-lg hover:bg-green-700 transition-all duration-200"
-            onClick={() => alert('Submit logic here!')}
+            onClick={handleSubmit}
             disabled={submitting}
           >
-            Post Job <FaCheckCircle />
+            {submitting ? <FaSpinner className="animate-spin" /> : <FaCheckCircle />} Post Job
           </button>
         )}
       </div>

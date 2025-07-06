@@ -44,7 +44,16 @@ const MainLayoutMobile: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] flex flex-col">
-      {/* Remove sticky header search bar. Only use Home page search bar. */}
+      {/* Logo and title at the top for mobile, left-aligned */}
+      <div className="flex items-center pl-4 pt-4 pb-2">
+        <img
+          src="/selectz.logo.png"
+          alt="Selectz Logo"
+          className="w-7 h-7 mr-2 object-contain rounded-xl bg-white/20 backdrop-blur-sm shadow"
+          style={{ background: 'rgba(24,90,157,0.08)' }}
+        />
+        <span className="text-lg font-bold text-[#185a9d] tracking-tight">Selectz</span>
+      </div>
 
       {/* Main Content - Card style */}
       <main className="flex-1 pt-2 pb-20 px-2">

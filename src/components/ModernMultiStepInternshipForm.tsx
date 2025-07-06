@@ -1023,46 +1023,42 @@ const ModernMultiStepInternshipForm: React.FC = () => {
         title: formData.internshipTitle.trim(),
         description: formData.internshipDescription.trim(),
         type: formData.internshipType,
-        location: `${formData.city}, ${formData.area}`.trim(),
-        pincode: formData.pincode,
-        street_address: formData.streetAddress,
+        location: {
+          city: formData.city,
+          area: formData.area,
+          pincode: formData.pincode,
+          street_address: formData.streetAddress
+        },
         duration: formData.duration === 'Custom' ? formData.customDuration : formData.duration,
-        start_date: formData.flexibleStart ? null : new Date(formData.startDate).toISOString(),
-        flexible_start: formData.flexibleStart,
+        stipend: {
+          type: formData.stipendType,
+          amount: parseFloat(formData.stipendAmount) || 0,
+          frequency: formData.stipendFrequency
+        },
+        requirements: [
+          ...formData.academicBackground,
+          ...formData.requiredDocuments,
+          formData.customAcademicBackground,
+          formData.customRequiredDocuments
+        ].filter(Boolean),
+        skills: [
+          ...formData.skillsRequired,
+          formData.customSkills
+        ].filter(Boolean),
+        responsibilities: [
+          formData.learningObjectives,
+          formData.projectDetails
+        ].filter(Boolean),
+        perks: [
+          ...formData.benefits,
+          formData.customBenefits,
+          formData.travelAllowance ? `Travel Allowance: ${formData.travelAllowanceAmount}` : null,
+          formData.academicCredit ? `Academic Credit: ${formData.academicCreditDetails}` : null,
+          formData.mentorshipAvailable ? `Mentorship: ${formData.mentorshipDetails}` : null
+        ].filter(Boolean),
         application_deadline: new Date(formData.applicationDeadline).toISOString(),
-        stipend_type: formData.stipendType,
-        stipend_amount: formData.stipendAmount,
-        stipend_frequency: formData.stipendFrequency,
-        academic_credit: formData.academicCredit,
-        academic_credit_details: formData.academicCreditDetails,
-        benefits: formData.benefits,
-        custom_benefits: formData.customBenefits,
-        travel_allowance: formData.travelAllowance,
-        travel_allowance_amount: formData.travelAllowanceAmount,
-        education_level: formData.educationLevel,
-        current_year: formData.currentYear,
-        minimum_gpa: formData.minimumGpa,
-        gpa_required: formData.gpaRequired,
-        academic_background: formData.academicBackground,
-        custom_academic_background: formData.customAcademicBackground,
-        experience_level: formData.experienceLevel,
-        skills_required: formData.skillsRequired,
-        custom_skills: formData.customSkills,
-        languages: formData.languages,
-        custom_language: formData.customLanguage,
-        required_documents: formData.requiredDocuments,
-        custom_required_documents: formData.customRequiredDocuments,
-        learning_objectives: formData.learningObjectives,
-        mentorship_available: formData.mentorshipAvailable,
-        mentorship_details: formData.mentorshipDetails,
-        project_based: formData.projectBased,
-        project_details: formData.projectDetails,
-        application_process: formData.applicationProcess,
-        interview_process: formData.interviewProcess,
-        notification_email: formData.notificationEmail,
-        status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        start_date: formData.flexibleStart ? null : new Date(formData.startDate).toISOString(),
+        status: 'active'
       };
 
       // Insert the internship
@@ -1107,6 +1103,9 @@ const ModernMultiStepInternshipForm: React.FC = () => {
     }
     if (step === 4) {
       if (!validateStep5()) return;
+      // Last step: submit
+      handleSubmit();
+      return;
     }
     setStep((prev) => prev + 1);
   };
@@ -1182,12 +1181,22 @@ const ModernMultiStepInternshipForm: React.FC = () => {
         >
           <FaArrowLeft /> Back
         </button>
-        <button
-          className="px-6 py-2 rounded-full bg-blue-600 text-white font-semibold flex items-center gap-2 shadow-lg hover:bg-blue-700 transition-all duration-200"
-          onClick={handleNext}
-        >
-          Next <FaArrowRight />
-        </button>
+        {step < 4 ? (
+          <button
+            className="px-6 py-2 rounded-full bg-blue-600 text-white font-semibold flex items-center gap-2 shadow-lg hover:bg-blue-700 transition-all duration-200"
+            onClick={handleNext}
+          >
+            Next <FaArrowRight />
+          </button>
+        ) : (
+          <button
+            className="px-6 py-2 rounded-full bg-green-600 text-white font-semibold flex items-center gap-2 shadow-lg hover:bg-green-700 transition-all duration-200"
+            onClick={handleNext}
+            disabled={submitting}
+          >
+            {submitting ? <FaSpinner className="animate-spin" /> : <FaCheckCircle />} Submit
+          </button>
+        )}
       </div>
       {/* Draft Manager Modal */}
       <InternshipDraftManager

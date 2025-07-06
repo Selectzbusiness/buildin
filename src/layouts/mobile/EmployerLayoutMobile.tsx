@@ -45,7 +45,13 @@ const EmployerLayoutMobile: React.FC = () => {
       {/* Sticky Mobile Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-[#e3f0fa] flex items-center justify-between px-4 h-14 shadow-sm">
         <div className="flex items-center gap-2">
-          <span className="text-xl font-bold text-[#185a9d] tracking-tight">Selectz</span>
+          <img
+            src="/selectz.logo.png"
+            alt="Selectz Logo"
+            className="w-6 h-6 mr-1 object-contain rounded-xl bg-white/20 backdrop-blur-sm shadow"
+            style={{ background: 'rgba(24,90,157,0.08)' }}
+          />
+          <span className="text-lg font-bold text-[#185a9d] tracking-tight">Selectz</span>
         </div>
         <button
           className="px-3 py-1 rounded-full bg-[#185a9d] text-white font-semibold text-xs shadow hover:bg-[#12406a] transition"
@@ -85,6 +91,12 @@ const EmployerLayoutMobile: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-white flex flex-col">
           <div className="flex items-center justify-between p-4 border-b border-gray-100">
             <div className="flex items-center gap-2">
+              <img
+                src="/selectz.logo.png"
+                alt="Selectz Logo"
+                className="w-6 h-6 mr-1 object-contain rounded-xl bg-white/20 backdrop-blur-sm shadow"
+                style={{ background: 'rgba(24,90,157,0.08)' }}
+              />
               <span className="text-lg font-bold text-[#185a9d]">Selectz</span>
             </div>
             <button className="text-2xl text-gray-400" onClick={() => setIsMenuOpen(false)} aria-label="Close menu">&times;</button>

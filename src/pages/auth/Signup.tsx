@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../config/supabase';
+import useIsMobile from '../../hooks/useIsMobile';
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
     fullName: '',
-    role: 'jobseeker' as 'jobseeker' | 'employer',
+    role: 'candidate' as 'candidate' | 'employer',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,9 +57,21 @@ const Signup: React.FC = () => {
         return;
       }
       setSuccess('Registration successful! Please check your email to confirm your account. You will be redirected to login in 7 seconds.');
+      console.log('Setting up signup redirect, isMobile:', isMobile);
       setTimeout(() => {
-        navigate('/login');
+        console.log('Executing signup redirect to login');
+        if (isMobile) {
+          window.location.href = '/login';
+        } else {
+          navigate('/login');
+        }
       }, 7000);
+      
+      // Fallback redirect after 10 seconds in case setTimeout fails
+      setTimeout(() => {
+        console.log('Fallback signup redirect triggered');
+        window.location.href = '/login';
+      }, 10000);
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
@@ -87,7 +101,6 @@ const Signup: React.FC = () => {
             Create your account and start your journey
           </p>
         </div>
-
         {/* Form container */}
         <div className="glass-stripe p-6 sm:p-8">
           {/* Error/Success messages */}
@@ -111,7 +124,6 @@ const Signup: React.FC = () => {
               </div>
             </div>
           )}
-
           <form className="space-y-5 sm:space-y-6" onSubmit={handleSubmit}>
             {/* Full Name field */}
             <div className="space-y-2">
@@ -136,7 +148,6 @@ const Signup: React.FC = () => {
                 </div>
               </div>
             </div>
-
             {/* Email field */}
             <div className="space-y-2">
               <label htmlFor="email" className="block text-sm font-semibold text-gray-700">
@@ -161,7 +172,6 @@ const Signup: React.FC = () => {
                 </div>
               </div>
             </div>
-
             {/* Password field */}
             <div className="space-y-2">
               <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
@@ -191,13 +201,12 @@ const Signup: React.FC = () => {
                   ) : (
                     <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268-2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                   )}
                 </button>
               </div>
             </div>
-
             {/* Confirm Password field */}
             <div className="space-y-2">
               <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700">
@@ -227,66 +236,46 @@ const Signup: React.FC = () => {
                   ) : (
                     <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268-2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                   )}
                 </button>
               </div>
             </div>
-
             {/* Role selection */}
             <div className="space-y-2">
-              <label htmlFor="role" className="block text-sm font-semibold text-gray-700">
-                I am a
-              </label>
-              <div className="relative">
-                <select
-                  id="role"
-                  name="role"
-                  required
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as 'jobseeker' | 'employer' })}
-                  className="w-full px-3 sm:px-4 py-3 sm:py-4 border border-gray-200 rounded-2xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#185a9d] focus:border-transparent transition-all duration-300 bg-white/80 backdrop-blur-sm appearance-none text-sm sm:text-base"
+              <label className="block text-sm font-semibold text-gray-700">Role</label>
+              <div className="flex space-x-4">
+                <button
+                  type="button"
+                  className={`flex-1 px-4 py-2 rounded-2xl border text-sm font-semibold transition-all duration-200 ${formData.role === 'candidate' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}
+                  onClick={() => setFormData({ ...formData, role: 'candidate' })}
+                  disabled={loading}
                 >
-                                  <option value="jobseeker">Candidate</option>
-                <option value="employer">Employer</option>
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 sm:pr-4 pointer-events-none">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
+                  Candidate
+                </button>
+                <button
+                  type="button"
+                  className={`flex-1 px-4 py-2 rounded-2xl border text-sm font-semibold transition-all duration-200 ${formData.role === 'employer' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}
+                  onClick={() => setFormData({ ...formData, role: 'employer' })}
+                  disabled={loading}
+                >
+                  Employer
+                </button>
               </div>
             </div>
-
             {/* Submit button */}
             <button
               type="submit"
+              className="w-full py-3 sm:py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-base sm:text-lg transition-all duration-200 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed mt-2"
               disabled={loading}
-              className="w-full py-3 sm:py-4 px-6 bg-gradient-to-r from-[#185a9d] to-[#43cea2] text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm sm:text-base"
             >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white mr-2 sm:mr-3"></div>
-                  Creating account...
-                </div>
-              ) : (
-                'Create Account'
-              )}
+              {loading ? 'Signing up...' : 'Sign Up'}
             </button>
           </form>
-
-          {/* Login link */}
-          <div className="mt-6 sm:mt-8 text-center">
-            <p className="text-gray-600 text-sm">
-              Already have an account?{' '}
-              <button
-                onClick={() => navigate('/login')}
-                className="font-semibold text-[#185a9d] hover:text-[#43cea2] transition-colors duration-300"
-              >
-                Login
-              </button>
-            </p>
+          <div className="mt-4 text-center">
+            <span className="text-gray-700 text-sm">Already have an account?</span>
+            <Link to="/login" className="ml-2 text-blue-600 hover:underline font-semibold text-sm">Login</Link>
           </div>
         </div>
       </div>

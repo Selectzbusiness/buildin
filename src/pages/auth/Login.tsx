@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../config/supabase';
 import { AuthContext } from '../../contexts/AuthContext';
+import useIsMobile from '../../hooks/useIsMobile';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -15,6 +16,8 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     try {
@@ -168,13 +171,41 @@ const Login: React.FC = () => {
       setLoading(false);
 
       // Show success message for 2 seconds, then redirect
+      console.log('Setting up redirect for role:', formData.role, 'isMobile:', isMobile);
+      
+      // Store redirect info in case we need a fallback
+      const redirectInfo = {
+        role: formData.role,
+        isMobile: isMobile,
+        timestamp: Date.now()
+      };
+      
       setTimeout(() => {
+        console.log('Executing redirect for role:', formData.role);
         if (formData.role === 'employer') {
-          navigate('/employer/company-details');
+          console.log('Redirecting employer to company-details');
+          window.location.href = '/employer/company-details';
         } else {
-          navigate('/');
+          console.log('Redirecting candidate, isMobile:', isMobile);
+          if (isMobile) {
+            window.location.href = '/';
+          } else {
+            navigate('/');
+          }
         }
       }, 2000);
+      
+      // Fallback redirect after 5 seconds in case setTimeout fails
+      setTimeout(() => {
+        console.log('Fallback redirect triggered for role:', formData.role);
+        if (formData.role === 'employer') {
+          console.log('Fallback: Redirecting employer to company-details');
+          window.location.href = '/employer/company-details';
+        } else {
+          console.log('Fallback: Redirecting candidate');
+          window.location.href = '/';
+        }
+      }, 5000);
     } catch (err: any) {
       setError(err.message || 'An error occurred during login. Please try again.');
       setLoading(false);

@@ -92,6 +92,9 @@ const RoleProtectedRoute: React.FC<{
   return <>{children}</>;
 };
 
+// Utility to detect mobile device
+const isMobile = () => typeof window !== 'undefined' && (window.innerWidth < 768 || /Mobi|Android/i.test(navigator.userAgent));
+
 const App: React.FC = () => {
   return (
     <AuthProvider>

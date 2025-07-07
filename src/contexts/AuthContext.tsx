@@ -101,9 +101,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         setLoading(false);
 
-        // Handle magic link login
+        // Handle magic link login - removed window.location.reload() to prevent conflicts
         if (event === 'SIGNED_IN') {
-          window.location.reload();
+          console.log('User signed in via magic link or other method');
         }
       }
     );

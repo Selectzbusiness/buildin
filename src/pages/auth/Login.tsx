@@ -42,6 +42,32 @@ const Login: React.FC = () => {
         }
         if (data?.session) {
           console.log('Supabase session found on load:', data.session);
+          // If user is already logged in, redirect them
+          if (data.session.user) {
+            // Check their role and redirect accordingly
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('roles')
+              .eq('auth_id', data.session.user.id)
+              .single();
+            
+            if (profileData?.roles?.includes('employer')) {
+              // Check if they have company details
+              const { data: companyData } = await supabase
+                .from('companies')
+                .select('*')
+                .eq('auth_id', data.session.user.id)
+                .maybeSingle();
+              
+              if (companyData) {
+                navigate('/employer/dashboard');
+              } else {
+                navigate('/employer/company-details');
+              }
+            } else {
+              navigate('/');
+            }
+          }
         } else {
           console.warn('No Supabase session found on load.');
         }
@@ -51,7 +77,7 @@ const Login: React.FC = () => {
     };
     
     checkSession();
-  }, []);
+  }, [navigate]);
 
   console.log('App is running as a client-side SPA. SSR is NOT present.');
 
@@ -242,39 +268,38 @@ const Login: React.FC = () => {
       setSuccess('Login successful! Redirecting...');
       setLoading(false);
 
-      setTimeout(async () => {
-        if (formData.role === 'employer') {
-          // Check if employer already has company details
-          try {
-            const { data: companyData, error: companyError } = await supabase
-              .from('companies')
-              .select('*')
-              .eq('auth_id', loginData.user.id)
-              .maybeSingle();
+      // Immediate navigation without setTimeout to prevent race conditions
+      if (formData.role === 'employer') {
+        // Check if employer already has company details
+        try {
+          const { data: companyData, error: companyError } = await supabase
+            .from('companies')
+            .select('*')
+            .eq('auth_id', loginData.user.id)
+            .maybeSingle();
 
-            if (companyError) {
-              console.error('Error checking company profile:', companyError);
-              // If error checking, redirect to company details form
-              navigate('/employer/company-details');
-              return;
-            }
+          if (companyError) {
+            console.error('Error checking company profile:', companyError);
+            // If error checking, redirect to company details form
+            navigate('/employer/company-details');
+            return;
+          }
 
-            if (companyData) {
-              // Company profile exists, redirect to employer dashboard
-              navigate('/employer/dashboard');
-            } else {
-              // No company profile, redirect to company details form
-              navigate('/employer/company-details');
-            }
-          } catch (err) {
-            console.error('Error checking company profile:', err);
-            // If error, redirect to company details form
+          if (companyData) {
+            // Company profile exists, redirect to employer dashboard
+            navigate('/employer/dashboard');
+          } else {
+            // No company profile, redirect to company details form
             navigate('/employer/company-details');
           }
-        } else {
-          navigate('/');
+        } catch (err) {
+          console.error('Error checking company profile:', err);
+          // If error, redirect to company details form
+          navigate('/employer/company-details');
         }
-      }, 2000);
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err.message || 'An error occurred during login. Please try again.');
       setLoading(false);

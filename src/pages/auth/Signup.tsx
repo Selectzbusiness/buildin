@@ -55,10 +55,10 @@ const Signup: React.FC = () => {
         setLoading(false);
         return;
       }
-      setSuccess('Registration successful! Please check your email to confirm your account. You will be redirected to login in 7 seconds.');
+      setSuccess('Registration successful! Please check your email to confirm your account. You will be redirected to login in 3 seconds.');
       setTimeout(() => {
         navigate('/login');
-      }, 7000);
+      }, 3000);
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {

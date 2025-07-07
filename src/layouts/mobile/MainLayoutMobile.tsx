@@ -44,15 +44,27 @@ const MainLayoutMobile: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] flex flex-col">
-      {/* Logo and title at the top for mobile, left-aligned */}
-      <div className="flex items-center pl-4 pt-4 pb-2">
-        <img
-          src="/selectz.logo.png"
-          alt="Selectz Logo"
-          className="w-7 h-7 mr-2 object-contain rounded-xl bg-white/20 backdrop-blur-sm shadow"
-          style={{ background: 'rgba(24,90,157,0.08)' }}
-        />
-        <span className="text-lg font-bold text-[#185a9d] tracking-tight">Selectz</span>
+      {/* Header with logo and login/signup button for mobile */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <div className="flex items-center">
+          <img
+            src="/selectz.logo.png"
+            alt="Selectz Logo"
+            className="w-7 h-7 mr-2 object-contain rounded-xl bg-white/20 backdrop-blur-sm shadow"
+            style={{ background: 'rgba(24,90,157,0.08)' }}
+          />
+          <span className="text-lg font-bold text-[#185a9d] tracking-tight">Selectz</span>
+        </div>
+        
+        {/* Login/Signup button - only show if user is not logged in */}
+        {!profile && (
+          <button
+            onClick={() => navigate('/login')}
+            className="px-4 py-2 bg-gradient-to-r from-[#185a9d] to-[#43cea2] text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+          >
+            Login
+          </button>
+        )}
       </div>
 
       {/* Main Content - Card style */}

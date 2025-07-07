@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../config/supabase';
 import { AuthContext } from '../../contexts/AuthContext';
@@ -15,6 +15,29 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    try {
+      const testKey = '__test__';
+      localStorage.setItem(testKey, '1');
+      localStorage.removeItem(testKey);
+      console.log('localStorage is available and working.');
+    } catch (e) {
+      console.error('localStorage is NOT available! Supabase auth will not persist sessions.', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data?.session) {
+        console.log('Supabase session found on load:', data.session);
+      } else {
+        console.warn('No Supabase session found on load.');
+      }
+    });
+  }, []);
+
+  console.log('App is running as a client-side SPA. SSR is NOT present.');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,12 +60,12 @@ const Login: React.FC = () => {
           email: formData.email,
           password: formData.password,
         });
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 20000)); // 20 seconds
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Network timeout. Please check your connection and try again.')), 30000)); // 30 seconds
         const result: any = await Promise.race([signInPromise, timeoutPromise]);
         data = result.data;
         error = result.error;
       } catch (err: any) {
-        setError(err.message || 'Invalid email or password or network timeout.');
+        setError(err.message || 'Network error. Please check your connection and try again.');
         setLoading(false);
         return;
       }
@@ -203,6 +226,7 @@ const Login: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="w-full px-3 sm:px-4 py-3 sm:py-4 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#185a9d] focus:border-transparent transition-all duration-300 bg-white/80 backdrop-blur-sm text-sm sm:text-base"
                   placeholder="Enter your email"
+                  disabled={loading}
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 sm:pr-4">
                   <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -276,14 +300,17 @@ const Login: React.FC = () => {
             {/* Submit button */}
             <button
               type="submit"
+              className={`w-full py-3 sm:py-4 rounded-2xl font-semibold text-white transition-all duration-300 ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-[#185a9d] to-[#43cea2] hover:from-[#43cea2] hover:to-[#185a9d]'}`}
               disabled={loading}
-              className="w-full py-3 sm:py-4 px-6 bg-gradient-to-r from-[#185a9d] to-[#43cea2] text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm sm:text-base"
             >
               {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white mr-2 sm:mr-3"></div>
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                  </svg>
                   Logging in...
-                </div>
+                </span>
               ) : (
                 'Login'
               )}

@@ -49,7 +49,7 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return; // Prevent double submit
+    if (loading) return;
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -161,21 +161,24 @@ const Login: React.FC = () => {
         return;
       }
 
+      console.log('After login, before profile fetch');
       setUser(loginData.user);
       setProfile(userProfile);
       setSuccess('Login successful! Redirecting...');
       setLoading(false);
 
-      // Navigate based on the selected role
-      if (formData.role === 'employer') {
-        navigate('/employer/company-details');
-      } else {
-        navigate('/');
-      }
+      // Show success message for 2 seconds, then redirect
+      setTimeout(() => {
+        if (formData.role === 'employer') {
+          navigate('/employer/company-details');
+        } else {
+          navigate('/');
+        }
+      }, 2000);
     } catch (err: any) {
-      console.log('Login error', err);
       setError(err.message || 'An error occurred during login. Please try again.');
       setLoading(false);
+      console.error('Login error', err);
     } finally {
       setLoading(false);
       console.log('Login finished');

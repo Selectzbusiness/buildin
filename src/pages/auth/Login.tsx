@@ -62,15 +62,27 @@ const Login: React.FC = () => {
       }
       // Login with Supabase Auth
       console.log('Before supabase.auth.signInWithPassword');
-      let data: any, error: any;
+      let loginData: any, loginError: any;
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password,
         });
+        loginData = data;
+        loginError = error;
         console.log('Supabase signInWithPassword response:', { data, error });
-        if (error || !data.session) {
-          setError(error?.message || 'Invalid email or password.');
+        if (error) {
+          setError(error.message || 'Invalid email or password.');
+          setLoading(false);
+          return;
+        }
+        if (!data.session) {
+          setError('Login failed: No session returned. Please check your credentials or confirm your email.');
+          setLoading(false);
+          return;
+        }
+        if (!data.user) {
+          setError('Login failed: No user returned. Please check your credentials or confirm your email.');
           setLoading(false);
           return;
         }
@@ -80,7 +92,7 @@ const Login: React.FC = () => {
         console.error('Network or Supabase error (catch block):', err);
         return;
       }
-      console.log('After supabase.auth.signInWithPassword', { data, error });
+      console.log('After supabase.auth.signInWithPassword', { data: loginData, error: loginError });
 
       // Immediately check the session after login
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -94,24 +106,23 @@ const Login: React.FC = () => {
       }
       console.log('Session check after login:', sessionData);
 
-      // Fetch user profile from users table
+      // Fetch user profile from profiles table (not users)
       let { data: userProfile, error: profileError } = await supabase
-        .from('users')
+        .from('profiles')
         .select('*')
-        .eq('id', data.user.id)
+        .eq('auth_id', loginData.user.id)
         .single();
 
       // If profile does not exist, insert it
       if (!userProfile) {
         const { error: insertError } = await supabase
-          .from('users')
+          .from('profiles')
           .insert([{
-            id: data.user.id,
-            email: data.user.email,
-            full_name: data.user.user_metadata?.full_name || '',
+            auth_id: loginData.user.id,
+            email: loginData.user.email,
+            full_name: loginData.user.user_metadata?.full_name || '',
             role: formData.role,
             roles: [formData.role],
-            auth_id: data.user.id,
           }]);
         if (insertError) {
           setError('Failed to create user profile: ' + insertError.message);
@@ -119,9 +130,9 @@ const Login: React.FC = () => {
           return;
         }
         ({ data: userProfile } = await supabase
-          .from('users')
+          .from('profiles')
           .select('*')
-          .eq('id', data.user.id)
+          .eq('auth_id', loginData.user.id)
           .single());
       }
 
@@ -132,12 +143,12 @@ const Login: React.FC = () => {
       }
       if (!roles.includes(formData.role)) {
         const { error: updateError } = await supabase
-          .from('users')
+          .from('profiles')
           .update({
             role: formData.role,
             roles: [...roles, formData.role]
           })
-          .eq('id', data.user.id);
+          .eq('auth_id', loginData.user.id);
         if (updateError) {
           console.error('Error updating user roles:', updateError);
         } else {
@@ -150,7 +161,7 @@ const Login: React.FC = () => {
         return;
       }
 
-      setUser(data.user);
+      setUser(loginData.user);
       setProfile(userProfile);
       setSuccess('Login successful! Redirecting...');
       setLoading(false);

@@ -1,7 +1,4 @@
 # Handle client-side routing
-/*    /index.html   200
-
-# Specific redirects for common routes
 /jobs/*    /index.html   200
 /internships/*    /index.html   200
 /employer/*    /index.html   200
@@ -16,4 +13,10 @@
 /help/*    /index.html   200
 
 # Handle static assets
-/static/*    /static/:splat   200 
+/static/*    /static/:splat   200
+
+# Serve service worker at root for PWA
+/service-worker.js  /service-worker.js  200
+
+# Catch-all route for SPA
+/*    /index.html   200 

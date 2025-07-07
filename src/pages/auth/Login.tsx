@@ -18,6 +18,7 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return; // Prevent double submit
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -36,7 +37,7 @@ const Login: React.FC = () => {
           email: formData.email,
           password: formData.password,
         });
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000));
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 20000)); // 20 seconds
         const result: any = await Promise.race([signInPromise, timeoutPromise]);
         data = result.data;
         error = result.error;

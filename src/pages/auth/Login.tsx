@@ -253,9 +253,22 @@ const Login: React.FC = () => {
         timestamp: Date.now()
       };
       
-      // Immediate redirect for mobile to avoid setTimeout issues
-      if (isMobile) {
-        console.log('Mobile detected, redirecting immediately');
+      // Enhanced mobile detection for real mobile devices
+      const isRealMobileDevice = () => {
+        const userAgent = navigator.userAgent.toLowerCase();
+        const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+        const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        const isMobilePlatform = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.platform);
+        
+        return isMobileUA || (hasTouch && window.innerWidth < 768) || isMobilePlatform;
+      };
+      
+      const realMobile = isRealMobileDevice();
+      console.log('Real mobile detection:', { isMobile, realMobile, userAgent: navigator.userAgent });
+      
+      // Immediate redirect for real mobile devices to avoid setTimeout issues
+      if (isMobile || realMobile) {
+        console.log('Real mobile device detected, redirecting immediately');
         if (formData.role === 'employer') {
           console.log('Mobile: Redirecting employer to company-details');
           window.location.href = '/employer/company-details';
@@ -289,6 +302,26 @@ const Login: React.FC = () => {
           window.location.href = '/';
         }
       }, 5000);
+      
+      // Additional mobile fallback - always use window.location.href for mobile-like devices
+      const additionalMobileCheck = () => {
+        const userAgent = navigator.userAgent.toLowerCase();
+        const isMobileLike = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent) || 
+                            ('ontouchstart' in window) || 
+                            (navigator.maxTouchPoints > 0);
+        
+        if (isMobileLike) {
+          console.log('Additional mobile check: Using window.location.href for mobile-like device');
+          if (formData.role === 'employer') {
+            window.location.href = '/employer/company-details';
+          } else {
+            window.location.href = '/';
+          }
+        }
+      };
+      
+      // Run additional check after a short delay
+      setTimeout(additionalMobileCheck, 1000);
     } catch (err: any) {
       setError(err.message || 'An error occurred during login. Please try again.');
       setLoading(false);

@@ -30,21 +30,36 @@ const Login: React.FC = () => {
       }
       // Login with Supabase Auth
       console.log('Before supabase.auth.signInWithPassword');
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      });
+      let data: any, error: any;
+      try {
+        const signInPromise = supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000));
+        const result: any = await Promise.race([signInPromise, timeoutPromise]);
+        data = result.data;
+        error = result.error;
+      } catch (err: any) {
+        setError(err.message || 'Invalid email or password or network timeout.');
+        setLoading(false);
+        return;
+      }
       console.log('After supabase.auth.signInWithPassword', { data, error });
       if (error || !data.session) {
-        setError('Invalid email or password.');
+        setError(error?.message || 'Invalid email or password or network timeout.');
         setLoading(false);
         return;
       }
 
-      // Wait for session to be set in localStorage
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const session = await supabase.auth.getSession();
-      console.log('Session after login (delayed):', session.data.session);
+      // Immediately check the session after login
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        setError("Session not available after login.");
+        setLoading(false);
+        return;
+      }
+      console.log('Session check after login:', sessionData);
 
       // Fetch user profile from users table
       let { data: userProfile, error: profileError } = await supabase
@@ -55,23 +70,21 @@ const Login: React.FC = () => {
 
       // If profile does not exist, insert it
       if (!userProfile) {
-        // Use the session to ensure the insert is authenticated
         const { error: insertError } = await supabase
           .from('users')
           .insert([{
             id: data.user.id,
             email: data.user.email,
             full_name: data.user.user_metadata?.full_name || '',
-            role: formData.role, // Single role field (required)
-            roles: [formData.role], // Roles array field
-            auth_id: data.user.id, // Set auth_id to match id
+            role: formData.role,
+            roles: [formData.role],
+            auth_id: data.user.id,
           }]);
         if (insertError) {
           setError('Failed to create user profile: ' + insertError.message);
           setLoading(false);
           return;
         }
-        // Fetch again
         ({ data: userProfile } = await supabase
           .from('users')
           .select('*')
@@ -79,33 +92,25 @@ const Login: React.FC = () => {
           .single());
       }
 
-      // Debug: log the fetched userProfile
-      console.log('Fetched userProfile:', userProfile);
-
       // Ensure roles is an array
       let roles = userProfile?.roles || [];
       if (!Array.isArray(roles)) {
-        // Handle legacy single role field
         roles = userProfile?.role ? [userProfile.role] : [formData.role];
       }
-      
-      // If user doesn't have the selected role, add it
       if (!roles.includes(formData.role)) {
         const { error: updateError } = await supabase
           .from('users')
-          .update({ 
-            role: formData.role, // Update single role field
-            roles: [...roles, formData.role] // Update roles array
+          .update({
+            role: formData.role,
+            roles: [...roles, formData.role]
           })
           .eq('id', data.user.id);
-        
         if (updateError) {
           console.error('Error updating user roles:', updateError);
         } else {
           roles = [...roles, formData.role];
         }
       }
-
       if (roles.length === 0) {
         setError('No roles found for user. Please contact support.');
         setLoading(false);
@@ -117,16 +122,16 @@ const Login: React.FC = () => {
       setSuccess('Login successful! Redirecting...');
       setLoading(false);
 
-      // Navigate based on the selected role - immediate redirect to fix mobile issue
+      // Navigate based on the selected role
       if (formData.role === 'employer') {
-        // Check if user has company profile, if not redirect to company details
         navigate('/employer/company-details');
       } else {
         navigate('/');
       }
     } catch (err: any) {
       console.log('Login error', err);
-      setError(err.message || 'An error occurred');
+      setError(err.message || 'An error occurred during login. Please try again.');
+      setLoading(false);
     } finally {
       setLoading(false);
       console.log('Login finished');

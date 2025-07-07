@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import './index.css';
 import App from './App';
+import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
 const container = document.getElementById('root');
 const root = createRoot(container!);
@@ -12,4 +13,7 @@ root.render(
       <App />
     </BrowserRouter>
   </React.StrictMode>
-); 
+);
+
+// Register the service worker for PWA support
+serviceWorkerRegistration.register(); 

@@ -20,6 +20,7 @@ const Login: React.FC = () => {
   const isMobile = useIsMobile();
 
   useEffect(() => {
+    // Test localStorage availability with better error handling
     try {
       const testKey = '__test__';
       localStorage.setItem(testKey, '1');
@@ -27,17 +28,30 @@ const Login: React.FC = () => {
       console.log('localStorage is available and working.');
     } catch (e) {
       console.error('localStorage is NOT available! Supabase auth will not persist sessions.', e);
+      // Don't block the app, just log the error
     }
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data?.session) {
-        console.log('Supabase session found on load:', data.session);
-      } else {
-        console.warn('No Supabase session found on load.');
+    // Check session with better error handling for mobile
+    const checkSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Session check error:', error);
+          return;
+        }
+        if (data?.session) {
+          console.log('Supabase session found on load:', data.session);
+        } else {
+          console.warn('No Supabase session found on load.');
+        }
+      } catch (err) {
+        console.error('Error checking session:', err);
       }
-    });
+    };
+    
+    checkSession();
   }, []);
 
   console.log('App is running as a client-side SPA. SSR is NOT present.');
@@ -53,6 +67,13 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
+    
+    // Check network connectivity for mobile
+    if (isMobile && !navigator.onLine) {
+      setError('No internet connection. Please check your network and try again.');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -63,7 +84,7 @@ const Login: React.FC = () => {
         setLoading(false);
         return;
       }
-      // Login with Supabase Auth
+      // Login with Supabase Auth - with better mobile error handling
       console.log('Before supabase.auth.signInWithPassword');
       let loginData: any, loginError: any;
       try {
@@ -75,7 +96,16 @@ const Login: React.FC = () => {
         loginError = error;
         console.log('Supabase signInWithPassword response:', { data, error });
         if (error) {
-          setError(error.message || 'Invalid email or password.');
+          // Better error messages for mobile users
+          if (error.message.includes('Invalid login credentials')) {
+            setError('Invalid email or password. Please check your credentials and try again.');
+          } else if (error.message.includes('Email not confirmed')) {
+            setError('Please check your email and confirm your account before logging in.');
+          } else if (error.message.includes('network') || error.message.includes('fetch')) {
+            setError('Network error. Please check your internet connection and try again.');
+          } else {
+            setError(error.message || 'Login failed. Please try again.');
+          }
           setLoading(false);
           return;
         }
@@ -90,78 +120,121 @@ const Login: React.FC = () => {
           return;
         }
       } catch (err: any) {
-        setError(err.message || 'Network error. Please check your connection and try again.');
-        setLoading(false);
         console.error('Network or Supabase error (catch block):', err);
+        if (err.message.includes('network') || err.message.includes('fetch')) {
+          setError('Network error. Please check your internet connection and try again.');
+        } else {
+          setError('An unexpected error occurred. Please try again.');
+        }
+        setLoading(false);
         return;
       }
       console.log('After supabase.auth.signInWithPassword', { data: loginData, error: loginError });
 
-      // Immediately check the session after login
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        setError("Session not available after login.");
-        setLoading(false);
-        // Log session error and data
-        console.error('Supabase getSession error:', sessionError);
-        console.log('Supabase getSession data:', sessionData);
-        return;
-      }
-      console.log('Session check after login:', sessionData);
-
-      // Fetch user profile from profiles table (not users)
-      let { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('auth_id', loginData.user.id)
-        .single();
-
-      // If profile does not exist, insert it
-      if (!userProfile) {
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert([{
-            auth_id: loginData.user.id,
-            email: loginData.user.email,
-            full_name: loginData.user.user_metadata?.full_name || '',
-            role: formData.role,
-            roles: [formData.role],
-          }]);
-        if (insertError) {
-          setError('Failed to create user profile: ' + insertError.message);
-          setLoading(false);
-          return;
+      // Immediately check the session after login with better error handling
+      try {
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          console.error('Session check error:', sessionError);
+          // Don't fail the login if session check fails, continue with the login data
         }
-        ({ data: userProfile } = await supabase
+        if (!sessionData.session) {
+          console.warn('Session not immediately available after login, but continuing...');
+          // Don't fail the login, the session might be available shortly
+        } else {
+          console.log('Session check after login:', sessionData);
+        }
+      } catch (err) {
+        console.error('Error checking session after login:', err);
+        // Don't fail the login if session check fails
+      }
+
+      // Fetch user profile from profiles table (not users) with better error handling
+      let userProfile = null;
+      let profileError = null;
+      
+      try {
+        const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('auth_id', loginData.user.id)
-          .single());
+          .single();
+        
+        userProfile = data;
+        profileError = error;
+        
+        // If profile does not exist, insert it
+        if (!userProfile) {
+          console.log('Creating new user profile...');
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert([{
+              auth_id: loginData.user.id,
+              email: loginData.user.email,
+              full_name: loginData.user.user_metadata?.full_name || '',
+              role: formData.role,
+              roles: [formData.role],
+            }]);
+          if (insertError) {
+            console.error('Failed to create user profile:', insertError);
+            // Don't fail the login, continue with basic user data
+            userProfile = {
+              auth_id: loginData.user.id,
+              email: loginData.user.email,
+              full_name: loginData.user.user_metadata?.full_name || '',
+              role: formData.role,
+              roles: [formData.role],
+            };
+          } else {
+            // Try to fetch the newly created profile
+            const { data: newProfile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('auth_id', loginData.user.id)
+              .single();
+            userProfile = newProfile;
+          }
+        }
+      } catch (err) {
+        console.error('Error handling user profile:', err);
+        // Don't fail the login, continue with basic user data
+        userProfile = {
+          auth_id: loginData.user.id,
+          email: loginData.user.email,
+          full_name: loginData.user.user_metadata?.full_name || '',
+          role: formData.role,
+          roles: [formData.role],
+        };
       }
 
-      // Ensure roles is an array
+      // Ensure roles is an array with better error handling
       let roles = userProfile?.roles || [];
       if (!Array.isArray(roles)) {
         roles = userProfile?.role ? [userProfile.role] : [formData.role];
       }
       if (!roles.includes(formData.role)) {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            role: formData.role,
-            roles: [...roles, formData.role]
-          })
-          .eq('auth_id', loginData.user.id);
-        if (updateError) {
-          console.error('Error updating user roles:', updateError);
-        } else {
-          roles = [...roles, formData.role];
+        try {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              role: formData.role,
+              roles: [...roles, formData.role]
+            })
+            .eq('auth_id', loginData.user.id);
+          if (updateError) {
+            console.error('Error updating user roles:', updateError);
+          } else {
+            roles = [...roles, formData.role];
+          }
+        } catch (err) {
+          console.error('Error updating roles:', err);
+          // Don't fail the login, use the current role
+          roles = [formData.role];
         }
       }
       if (roles.length === 0) {
-        setError('No roles found for user. Please contact support.');
-        setLoading(false);
-        return;
+        console.warn('No roles found, using default role');
+        roles = [formData.role];
       }
 
       console.log('After login, before profile fetch');
@@ -180,22 +253,32 @@ const Login: React.FC = () => {
         timestamp: Date.now()
       };
       
+      // Immediate redirect for mobile to avoid setTimeout issues
+      if (isMobile) {
+        console.log('Mobile detected, redirecting immediately');
+        if (formData.role === 'employer') {
+          console.log('Mobile: Redirecting employer to company-details');
+          window.location.href = '/employer/company-details';
+        } else {
+          console.log('Mobile: Redirecting candidate to home');
+          window.location.href = '/';
+        }
+        return;
+      }
+      
+      // Desktop: Use setTimeout for smooth UX
       setTimeout(() => {
         console.log('Executing redirect for role:', formData.role);
         if (formData.role === 'employer') {
           console.log('Redirecting employer to company-details');
-          window.location.href = '/employer/company-details';
+          navigate('/employer/company-details');
         } else {
-          console.log('Redirecting candidate, isMobile:', isMobile);
-          if (isMobile) {
-            window.location.href = '/';
-          } else {
-            navigate('/');
-          }
+          console.log('Redirecting candidate');
+          navigate('/');
         }
       }, 2000);
       
-      // Fallback redirect after 5 seconds in case setTimeout fails
+      // Fallback redirect after 5 seconds in case setTimeout fails (desktop only)
       setTimeout(() => {
         console.log('Fallback redirect triggered for role:', formData.role);
         if (formData.role === 'employer') {

@@ -92,6 +92,23 @@ const RoleProtectedRoute: React.FC<{
   return <>{children}</>;
 };
 
+// Special route for company details that allows employers without company profile
+const CompanyDetailsRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, profile } = useContext(AuthContext);
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  // Only allow employers to access this route
+  if (!profile?.roles?.includes('employer')) {
+    if (profile?.roles?.includes('jobseeker')) {
+      return <Navigate to="/" />;
+    } else {
+      return <Navigate to="/login" />;
+    }
+  }
+  return <>{children}</>;
+};
+
 // Utility to detect mobile device
 const isMobile = () => typeof window !== 'undefined' && (window.innerWidth < 768 || /Mobi|Android/i.test(navigator.userAgent));
 
@@ -157,6 +174,16 @@ const App: React.FC = () => {
                 <Route path="about" element={<AboutUs />} />
             </Route>
             
+            {/* Company Details Form - accessible to authenticated users with employer role */}
+            <Route 
+              path="/employer/company-details" 
+              element={
+                <CompanyDetailsRoute>
+                  <CompanyDetailsForm />
+                </CompanyDetailsRoute>
+              } 
+            />
+            
             {/* Employer routes */}
             <Route
               path="/employer"
@@ -179,7 +206,6 @@ const App: React.FC = () => {
               <Route path="posted-jobs" element={<PostedJobs />} />
                 <Route path="post-internship" element={<ModernMultiStepInternshipForm />} />
               <Route path="posted-internships" element={<PostedInternships />} />
-              <Route path="company-details" element={<CompanyDetailsForm />} />
               <Route path="job-seeker-profile/:id" element={<EmployerJobSeekerProfileView />} />
               <Route path="reels" element={<JobSeekerReels />} />
               <Route path="saved-videos" element={<SavedJobSeekerVideos />} />

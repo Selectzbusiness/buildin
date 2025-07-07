@@ -2,7 +2,6 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../config/supabase';
 import { AuthContext } from '../../contexts/AuthContext';
-import useIsMobile from '../../hooks/useIsMobile';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -17,7 +16,7 @@ const Login: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  const isMobile = useIsMobile();
+
 
   useEffect(() => {
     // Test localStorage availability with better error handling
@@ -68,8 +67,8 @@ const Login: React.FC = () => {
     e.preventDefault();
     if (loading) return;
     
-    // Check network connectivity for mobile
-    if (isMobile && !navigator.onLine) {
+    // Check network connectivity
+    if (!navigator.onLine) {
       setError('No internet connection. Please check your network and try again.');
       return;
     }
@@ -243,85 +242,39 @@ const Login: React.FC = () => {
       setSuccess('Login successful! Redirecting...');
       setLoading(false);
 
-      // Show success message for 2 seconds, then redirect
-      console.log('Setting up redirect for role:', formData.role, 'isMobile:', isMobile);
-      
-      // Store redirect info in case we need a fallback
-      const redirectInfo = {
-        role: formData.role,
-        isMobile: isMobile,
-        timestamp: Date.now()
-      };
-      
-      // Enhanced mobile detection for real mobile devices
-      const isRealMobileDevice = () => {
-        const userAgent = navigator.userAgent.toLowerCase();
-        const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
-        const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        const isMobilePlatform = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.platform);
-        
-        return isMobileUA || (hasTouch && window.innerWidth < 768) || isMobilePlatform;
-      };
-      
-      const realMobile = isRealMobileDevice();
-      console.log('Real mobile detection:', { isMobile, realMobile, userAgent: navigator.userAgent });
-      
-      // Immediate redirect for real mobile devices to avoid setTimeout issues
-      if (isMobile || realMobile) {
-        console.log('Real mobile device detected, redirecting immediately');
+      setTimeout(async () => {
         if (formData.role === 'employer') {
-          console.log('Mobile: Redirecting employer to company-details');
-          window.location.href = '/employer/company-details';
+          // Check if employer already has company details
+          try {
+            const { data: companyData, error: companyError } = await supabase
+              .from('companies')
+              .select('*')
+              .eq('auth_id', loginData.user.id)
+              .maybeSingle();
+
+            if (companyError) {
+              console.error('Error checking company profile:', companyError);
+              // If error checking, redirect to company details form
+              navigate('/employer/company-details');
+              return;
+            }
+
+            if (companyData) {
+              // Company profile exists, redirect to employer dashboard
+              navigate('/employer/dashboard');
+            } else {
+              // No company profile, redirect to company details form
+              navigate('/employer/company-details');
+            }
+          } catch (err) {
+            console.error('Error checking company profile:', err);
+            // If error, redirect to company details form
+            navigate('/employer/company-details');
+          }
         } else {
-          console.log('Mobile: Redirecting candidate to home');
-          window.location.href = '/';
-        }
-        return;
-      }
-      
-      // Desktop: Use setTimeout for smooth UX
-      setTimeout(() => {
-        console.log('Executing redirect for role:', formData.role);
-        if (formData.role === 'employer') {
-          console.log('Redirecting employer to company-details');
-          navigate('/employer/company-details');
-        } else {
-          console.log('Redirecting candidate');
           navigate('/');
         }
       }, 2000);
-      
-      // Fallback redirect after 5 seconds in case setTimeout fails (desktop only)
-      setTimeout(() => {
-        console.log('Fallback redirect triggered for role:', formData.role);
-        if (formData.role === 'employer') {
-          console.log('Fallback: Redirecting employer to company-details');
-          window.location.href = '/employer/company-details';
-        } else {
-          console.log('Fallback: Redirecting candidate');
-          window.location.href = '/';
-        }
-      }, 5000);
-      
-      // Additional mobile fallback - always use window.location.href for mobile-like devices
-      const additionalMobileCheck = () => {
-        const userAgent = navigator.userAgent.toLowerCase();
-        const isMobileLike = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent) || 
-                            ('ontouchstart' in window) || 
-                            (navigator.maxTouchPoints > 0);
-        
-        if (isMobileLike) {
-          console.log('Additional mobile check: Using window.location.href for mobile-like device');
-          if (formData.role === 'employer') {
-            window.location.href = '/employer/company-details';
-          } else {
-            window.location.href = '/';
-          }
-        }
-      };
-      
-      // Run additional check after a short delay
-      setTimeout(additionalMobileCheck, 1000);
     } catch (err: any) {
       setError(err.message || 'An error occurred during login. Please try again.');
       setLoading(false);

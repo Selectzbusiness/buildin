@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../config/supabase';
-import useIsMobile from '../../hooks/useIsMobile';
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -57,26 +56,9 @@ const Signup: React.FC = () => {
         return;
       }
       setSuccess('Registration successful! Please check your email to confirm your account. You will be redirected to login in 7 seconds.');
-      console.log('Setting up signup redirect, isMobile:', isMobile);
-      
-      // Immediate redirect for mobile to avoid setTimeout issues
-      if (isMobile) {
-        console.log('Mobile detected, redirecting to login immediately');
-        window.location.href = '/login';
-        return;
-      }
-      
-      // Desktop: Use setTimeout for smooth UX
       setTimeout(() => {
-        console.log('Executing signup redirect to login');
         navigate('/login');
       }, 7000);
-      
-      // Fallback redirect after 10 seconds in case setTimeout fails (desktop only)
-      setTimeout(() => {
-        console.log('Fallback signup redirect triggered');
-        window.location.href = '/login';
-      }, 10000);
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {

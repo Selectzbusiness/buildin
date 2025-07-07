@@ -162,8 +162,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           id: data.id, // This is the profiles.id (primary key)
           certifications: data.certifications || [],
           projects: data.projects || [],
-          // Set default roles for jobseeker
-          roles: ['jobseeker']
+          // Use actual roles from database, fallback to jobseeker if none
+          roles: data.roles || ['jobseeker']
         });
         return;
       }

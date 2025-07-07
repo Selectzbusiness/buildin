@@ -64,32 +64,23 @@ const Login: React.FC = () => {
       console.log('Before supabase.auth.signInWithPassword');
       let data: any, error: any;
       try {
-        const signInPromise = supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password,
         });
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Network timeout. Please check your connection and try again.')), 30000)); // 30 seconds
-        const result: any = await Promise.race([signInPromise, timeoutPromise]);
-        data = result.data;
-        error = result.error;
-        // Log the full result and error for debugging
-        console.log('Supabase signInWithPassword result:', result);
-        if (error) {
-          console.error('Supabase signInWithPassword error:', error);
+        console.log('Supabase signInWithPassword response:', { data, error });
+        if (error || !data.session) {
+          setError(error?.message || 'Invalid email or password.');
+          setLoading(false);
+          return;
         }
       } catch (err: any) {
         setError(err.message || 'Network error. Please check your connection and try again.');
         setLoading(false);
-        // Log the full error object
         console.error('Network or Supabase error (catch block):', err);
         return;
       }
       console.log('After supabase.auth.signInWithPassword', { data, error });
-      if (error || !data.session) {
-        setError(error?.message || 'Invalid email or password or network timeout.');
-        setLoading(false);
-        return;
-      }
 
       // Immediately check the session after login
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();

@@ -39,6 +39,14 @@ const Login: React.FC = () => {
 
   console.log('App is running as a client-side SPA. SSR is NOT present.');
 
+  // Log Supabase config for debugging (mask anon key)
+  console.log('Supabase URL:', process.env.REACT_APP_SUPABASE_URL);
+  if (process.env.REACT_APP_SUPABASE_ANON_KEY) {
+    console.log('Supabase Anon Key (masked):', process.env.REACT_APP_SUPABASE_ANON_KEY.slice(0, 6) + '...');
+  } else {
+    console.warn('Supabase Anon Key is missing!');
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return; // Prevent double submit
@@ -64,9 +72,16 @@ const Login: React.FC = () => {
         const result: any = await Promise.race([signInPromise, timeoutPromise]);
         data = result.data;
         error = result.error;
+        // Log the full result and error for debugging
+        console.log('Supabase signInWithPassword result:', result);
+        if (error) {
+          console.error('Supabase signInWithPassword error:', error);
+        }
       } catch (err: any) {
         setError(err.message || 'Network error. Please check your connection and try again.');
         setLoading(false);
+        // Log the full error object
+        console.error('Network or Supabase error (catch block):', err);
         return;
       }
       console.log('After supabase.auth.signInWithPassword', { data, error });
@@ -77,10 +92,13 @@ const Login: React.FC = () => {
       }
 
       // Immediately check the session after login
-      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (!sessionData.session) {
         setError("Session not available after login.");
         setLoading(false);
+        // Log session error and data
+        console.error('Supabase getSession error:', sessionError);
+        console.log('Supabase getSession data:', sessionData);
         return;
       }
       console.log('Session check after login:', sessionData);

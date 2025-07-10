@@ -1,8 +1,10 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import MultiStepApplication from '../../components/MultiStepApplication';
+import ApplicationStatusTracker from '../../components/ApplicationStatusTracker';
 
 const JobApplication: React.FC = () => {
+  const { applicationId } = useParams();
   const navigate = useNavigate();
 
   const handleClose = () => {
@@ -10,10 +12,13 @@ const JobApplication: React.FC = () => {
   };
 
   return (
-    <MultiStepApplication 
-      type="job" 
-      onClose={handleClose}
-    />
+    <div>
+      <MultiStepApplication 
+        type="job" 
+        onClose={handleClose}
+      />
+      {applicationId && <ApplicationStatusTracker applicationId={applicationId} />}
+    </div>
   );
 };
 

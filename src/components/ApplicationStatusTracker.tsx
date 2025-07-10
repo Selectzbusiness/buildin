@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { supabase } from '../config/supabase';
+import { format } from 'date-fns';
 
 interface Application {
   id: string;
@@ -15,17 +16,39 @@ interface Application {
   };
 }
 
-const ApplicationStatusTracker: React.FC = () => {
+interface ApplicationStatusTrackerProps {
+  applicationId?: string;
+  internshipApplicationId?: string;
+}
+
+const ApplicationStatusTracker: React.FC<ApplicationStatusTrackerProps> = ({ applicationId, internshipApplicationId }) => {
   const { user } = useContext(AuthContext);
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [actions, setActions] = useState([]);
 
   useEffect(() => {
     if (user) {
       fetchApplications();
     }
   }, [user]);
+
+  useEffect(() => {
+    const fetchActions = async () => {
+      setLoading(true);
+      let query = supabase.from('application_actions').select('*').order('performed_at', { ascending: true });
+      if (applicationId) {
+        query = query.eq('application_id', applicationId);
+      } else if (internshipApplicationId) {
+        query = query.eq('internship_application_id', internshipApplicationId);
+      }
+      const { data, error } = await query;
+      setActions((data as typeof actions) || []);
+      setLoading(false);
+    };
+    if (applicationId || internshipApplicationId) fetchActions();
+  }, [applicationId, internshipApplicationId]);
 
   const fetchApplications = async () => {
     try {
@@ -210,6 +233,25 @@ const ApplicationStatusTracker: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {loading ? (
+        <div>Loading timeline...</div>
+      ) : !actions.length ? (
+        <div>No actions yet.</div>
+      ) : (
+        <div className="p-4 bg-white rounded-xl shadow">
+          <h3 className="font-bold mb-2">Application Timeline</h3>
+          <ul className="space-y-2">
+            {actions.map((action: any) => (
+              <li key={action.id} className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">{format(new Date(action.performed_at), 'yyyy-MM-dd HH:mm')}</span>
+                <span className="font-medium">{action.action.replace(/_/g, ' ')}</span>
+                {action.notes && <span className="text-gray-400 text-xs">({action.notes})</span>}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

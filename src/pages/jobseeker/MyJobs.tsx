@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import Modal from '../../components/Modal';
 import toast from 'react-hot-toast';
 import useIsMobile from '../../hooks/useIsMobile';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const TABS = [
   { id: 'applied', label: 'Applied Jobs', icon: FiBriefcase },
@@ -96,7 +97,7 @@ const MyJobs: React.FC = () => {
           const { data, error } = await supabase
             .from('interviews')
             .select('*, job_offers(*), applications(*, jobs(*, companies(*)))')
-            .or(`user_id.eq.${profile.auth_id},employer_id.eq.${profile.auth_id}`)
+            .eq('job_seeker_id', profile.id)
             .order('scheduled_date', { ascending: false });
           if (error) throw error;
           setInterviews(data || []);
@@ -135,13 +136,13 @@ const MyJobs: React.FC = () => {
       {/* Sub-tabs for Jobs and Internships */}
       <div className="mb-6 flex space-x-4 justify-center">
         <button
-          className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 shadow-sm border ${appliedTab === 'jobs' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:bg-blue-50'}`}
+          className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 shadow-sm border ${appliedTab === 'jobs' ? 'bg-[#234567] text-white border-[#234567]' : 'bg-white text-gray-700 border-gray-200 hover:bg-blue-50'}`}
           onClick={() => setAppliedTab('jobs')}
         >
           Jobs
         </button>
         <button
-          className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 shadow-sm border ${appliedTab === 'internships' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:bg-blue-50'}`}
+          className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 shadow-sm border ${appliedTab === 'internships' ? 'bg-[#234567] text-white border-[#234567]' : 'bg-white text-gray-700 border-gray-200 hover:bg-blue-50'}`}
           onClick={() => setAppliedTab('internships')}
         >
           Internships
@@ -162,32 +163,39 @@ const MyJobs: React.FC = () => {
               <div>
                 <h3 className={`text-lg font-bold mb-4 flex items-center ${mobile ? 'text-black' : 'text-gray-800'}`}><FiBriefcase className={`w-5 h-5 mr-2 ${mobile ? 'text-gray-500' : 'text-[#185a9d]'}`} />Job Applications</h3>
                 <div className="space-y-6">
-                  {appliedJobs.map((app) => (
-                    <div key={app.id} className={`rounded-xl shadow p-5 flex flex-col md:flex-row md:items-center md:justify-between hover:shadow-lg transition ${mobile ? 'bg-gray-50' : 'bg-gray-50'}`}>
-                      <div className="flex-1">
+                  {appliedJobs.map((app, idx) => (
+                    <AnimatePresence key={app.id}>
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        transition={{ duration: 0.4, delay: idx * 0.05 }}
+                        className={`rounded-2xl shadow-md p-5 flex flex-col gap-3 relative overflow-hidden ${mobile ? 'bg-white border border-[#e3e8f0] mb-2' : 'bg-gray-50'}`}
+                      >
+                        <div className="w-full h-1 rounded-t-2xl bg-gradient-to-r from-[#185a9d] to-[#43cea2] mb-2" />
                         <div className="flex items-center mb-2">
-                          <span className={`font-bold text-lg mr-2 ${mobile ? 'text-black' : 'text-[#185a9d]'}`}>{app.jobs?.title}</span>
+                          <span className={`font-bold text-lg mr-2 ${mobile ? 'text-[#185a9d]' : 'text-[#185a9d]'}`}>{app.jobs?.title}</span>
                           <span className="text-gray-500 text-sm">{app.jobs?.companies?.name}</span>
                         </div>
                         <div className="text-gray-500 text-sm mb-1">{renderLocation(app.jobs?.location)}</div>
                         <div className="text-xs text-gray-400">Applied: {new Date(app.applied_at || app.created_at).toLocaleDateString()}</div>
                         <div className="mt-2">
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${mobile ? 'bg-gray-200 text-gray-700' : getStatusColor(app.status)}`}>{app.status.replace('_', ' ')}</span>
+                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${mobile ? 'bg-gradient-to-r from-[#185a9d] to-[#43cea2] text-white shadow' : getStatusColor(app.status)}`}>{app.status.replace('_', ' ')}</span>
                         </div>
-                      </div>
-                      <div className="mt-4 md:mt-0 flex flex-col md:items-end space-y-2">
-                        <button
-                          className="px-4 py-2 bg-[#185a9d] text-white rounded-lg font-semibold hover:bg-[#216aad] transition"
-                          onClick={() => navigate(`/jobs/${app.job_id}`)}
-                        >View Details</button>
-                        {app.status !== 'withdrawn' && (
+                        <div className="flex flex-col gap-2 mt-3">
                           <button
-                            className="px-4 py-2 bg-red-100 text-red-600 rounded-lg font-semibold hover:bg-red-200 transition"
-                            onClick={() => setModal({ type: 'withdraw', data: app })}
-                          >Withdraw</button>
-                        )}
-                      </div>
-                    </div>
+                            className="px-4 py-2 bg-gradient-to-r from-[#185a9d] to-[#43cea2] text-white rounded-xl font-semibold shadow hover:scale-105 transition"
+                            onClick={() => navigate(`/jobs/${app.job_id}`)}
+                          >View Details</button>
+                          {app.status !== 'withdrawn' && (
+                            <button
+                              className="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-semibold hover:bg-red-200 transition"
+                              onClick={() => setModal({ type: 'withdraw', data: app })}
+                            >Withdraw</button>
+                          )}
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
                   ))}
                 </div>
               </div>
@@ -204,31 +212,38 @@ const MyJobs: React.FC = () => {
               <div>
                 <h3 className={`text-lg font-bold mb-4 flex items-center ${mobile ? 'text-black' : 'text-gray-800'}`}><FiBriefcase className={`w-5 h-5 mr-2 ${mobile ? 'text-gray-500' : 'text-[#185a9d]'}`} />Internship Applications</h3>
                 <div className="space-y-6">
-                  {appliedInternships.map((app) => (
-                    <div key={app.id} className={`rounded-xl shadow p-5 flex flex-col md:flex-row md:items-center md:justify-between hover:shadow-lg transition ${mobile ? 'bg-gray-50' : 'bg-gray-50'}`}>
-                      <div className="flex-1">
+                  {appliedInternships.map((app, idx) => (
+                    <AnimatePresence key={app.id}>
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        transition={{ duration: 0.4, delay: idx * 0.05 }}
+                        className={`rounded-2xl shadow-md p-5 flex flex-col gap-3 relative overflow-hidden ${mobile ? 'bg-white border border-[#e3e8f0] mb-2' : 'bg-gray-50'}`}
+                      >
+                        <div className="w-full h-1 rounded-t-2xl bg-gradient-to-r from-[#185a9d] to-[#43cea2] mb-2" />
                         <div className="flex items-center mb-2">
-                          <span className={`font-bold text-lg mr-2 ${mobile ? 'text-black' : 'text-[#185a9d]'}`}>{app.internships?.title}</span>
+                          <span className={`font-bold text-lg mr-2 ${mobile ? 'text-[#185a9d]' : 'text-[#185a9d]'}`}>{app.internships?.title}</span>
                         </div>
                         <div className="text-gray-500 text-sm mb-1">{renderLocation(app.internships?.location)}</div>
                         <div className="text-xs text-gray-400">Applied: {new Date(app.applied_at || app.created_at).toLocaleDateString()}</div>
                         <div className="mt-2">
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${mobile ? 'bg-gray-200 text-gray-700' : getStatusColor(app.status)}`}>{app.status.replace('_', ' ')}</span>
+                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${mobile ? 'bg-gradient-to-r from-[#185a9d] to-[#43cea2] text-white shadow' : getStatusColor(app.status)}`}>{app.status.replace('_', ' ')}</span>
                         </div>
-                      </div>
-                      <div className="mt-4 md:mt-0 flex flex-col md:items-end space-y-2">
-                        <button
-                          className="px-4 py-2 bg-[#185a9d] text-white rounded-lg font-semibold hover:bg-[#216aad] transition"
-                          onClick={() => navigate(`/internships/${app.internship_id}`)}
-                        >View Details</button>
-                        {app.status !== 'withdrawn' && (
+                        <div className="flex flex-col gap-2 mt-3">
                           <button
-                            className="px-4 py-2 bg-red-100 text-red-600 rounded-lg font-semibold hover:bg-red-200 transition"
-                            onClick={() => setModal({ type: 'withdraw', data: app })}
-                          >Withdraw</button>
-                        )}
-                      </div>
-                    </div>
+                            className="px-4 py-2 bg-[#185a9d] text-white rounded-lg font-semibold hover:bg-[#216aad] transition"
+                            onClick={() => navigate(`/internships/${app.internship_id}`)}
+                          >View Details</button>
+                          {app.status !== 'withdrawn' && (
+                            <button
+                              className="px-4 py-2 bg-red-100 text-red-600 rounded-lg font-semibold hover:bg-red-200 transition"
+                              onClick={() => setModal({ type: 'withdraw', data: app })}
+                            >Withdraw</button>
+                          )}
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
                   ))}
                 </div>
               </div>
@@ -260,38 +275,46 @@ const MyJobs: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {jobOffers.map((offer) => (
-            <div key={offer.id} className="bg-gray-50 rounded-xl shadow p-5 flex flex-col md:flex-row md:items-center md:justify-between hover:shadow-lg transition">
-              <div className="flex-1">
-                <div className="flex items-center mb-2">
-                  <span className="text-[#185a9d] font-bold text-lg mr-2">{offer.title}</span>
-                  <span className="text-gray-500 text-sm">{offer.company_name}</span>
+          {jobOffers.map((offer, idx) => (
+            <AnimatePresence key={offer.id}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 0.4, delay: idx * 0.05 }}
+                className="bg-gray-50 rounded-xl shadow p-5 flex flex-col md:flex-row md:items-center md:justify-between hover:shadow-lg transition"
+              >
+                <div className="flex-1">
+                  <div className="flex items-center mb-2">
+                    <span className="text-[#185a9d] font-bold text-lg mr-2">{offer.title}</span>
+                    <span className="text-gray-500 text-sm">{offer.company_name}</span>
+                  </div>
+                  <div className="text-gray-500 text-sm mb-1">{renderLocation(offer.location)}</div>
+                  <div className="text-xs text-gray-400">Received: {new Date(offer.created_at).toLocaleDateString()}</div>
+                  <div className="mt-2">
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(offer.status)}`}>{offer.status.replace('_', ' ')}</span>
+                  </div>
                 </div>
-                <div className="text-gray-500 text-sm mb-1">{renderLocation(offer.location)}</div>
-                <div className="text-xs text-gray-400">Received: {new Date(offer.created_at).toLocaleDateString()}</div>
-                <div className="mt-2">
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(offer.status)}`}>{offer.status.replace('_', ' ')}</span>
+                <div className="mt-4 md:mt-0 flex flex-col md:items-end space-y-2">
+                  {offer.status === 'pending' && (
+                    <button
+                      className="px-4 py-2 bg-[#185a9d] text-white rounded-lg font-semibold hover:bg-[#216aad] transition"
+                      onClick={() => setModal({ type: 'accept', data: offer })}
+                    >Accept</button>
+                  )}
+                  {offer.status === 'pending' && (
+                    <button
+                      className="px-4 py-2 bg-red-100 text-red-600 rounded-lg font-semibold hover:bg-red-200 transition"
+                      onClick={() => setModal({ type: 'decline', data: offer })}
+                    >Decline</button>
+                  )}
+                  <button
+                    className="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg font-semibold hover:bg-blue-200 transition"
+                    onClick={() => setModal({ type: 'schedule', data: offer })}
+                  >Schedule Interview</button>
                 </div>
-              </div>
-              <div className="mt-4 md:mt-0 flex flex-col md:items-end space-y-2">
-                {offer.status === 'pending' && (
-                  <button
-                    className="px-4 py-2 bg-[#185a9d] text-white rounded-lg font-semibold hover:bg-[#216aad] transition"
-                    onClick={() => setModal({ type: 'accept', data: offer })}
-                  >Accept</button>
-                )}
-                {offer.status === 'pending' && (
-                  <button
-                    className="px-4 py-2 bg-red-100 text-red-600 rounded-lg font-semibold hover:bg-red-200 transition"
-                    onClick={() => setModal({ type: 'decline', data: offer })}
-                  >Decline</button>
-                )}
-                <button
-                  className="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg font-semibold hover:bg-blue-200 transition"
-                  onClick={() => setModal({ type: 'schedule', data: offer })}
-                >Schedule Interview</button>
-              </div>
-            </div>
+              </motion.div>
+            </AnimatePresence>
           ))}
         </div>
       )}
@@ -314,30 +337,38 @@ const MyJobs: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {interviews.map((interview) => (
-            <div key={interview.id} className="bg-gray-50 rounded-xl shadow p-5 flex flex-col md:flex-row md:items-center md:justify-between hover:shadow-lg transition">
-              <div className="flex-1">
-                <div className="flex items-center mb-2">
-                  <span className="text-[#185a9d] font-bold text-lg mr-2">{interview.job_offers?.title || interview.applications?.jobs?.title}</span>
-                  <span className="text-gray-500 text-sm">{interview.job_offers?.company_name || interview.applications?.jobs?.companies?.name}</span>
+          {interviews.map((interview, idx) => (
+            <AnimatePresence key={interview.id}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 0.4, delay: idx * 0.05 }}
+                className="bg-gray-50 rounded-xl shadow p-5 flex flex-col md:flex-row md:items-center md:justify-between hover:shadow-lg transition"
+              >
+                <div className="flex-1">
+                  <div className="flex items-center mb-2">
+                    <span className="text-[#185a9d] font-bold text-lg mr-2">{interview.job_offers?.title || interview.applications?.jobs?.title}</span>
+                    <span className="text-gray-500 text-sm">{interview.job_offers?.company_name || interview.applications?.jobs?.companies?.name}</span>
+                  </div>
+                  <div className="text-gray-500 text-sm mb-1">{renderLocation(interview.location || interview.applications?.jobs?.location)}</div>
+                  <div className="text-xs text-gray-400">Scheduled: {new Date(interview.scheduled_date).toLocaleString()}</div>
+                  <div className="mt-2">
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(interview.status)}`}>{interview.status.replace('_', ' ')}</span>
+                  </div>
                 </div>
-                <div className="text-gray-500 text-sm mb-1">{renderLocation(interview.location || interview.applications?.jobs?.location)}</div>
-                <div className="text-xs text-gray-400">Scheduled: {new Date(interview.scheduled_date).toLocaleString()}</div>
-                <div className="mt-2">
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(interview.status)}`}>{interview.status.replace('_', ' ')}</span>
+                <div className="mt-4 md:mt-0 flex flex-col md:items-end space-y-2">
+                  <button
+                    className="px-4 py-2 bg-[#185a9d] text-white rounded-lg font-semibold hover:bg-[#216aad] transition"
+                    onClick={() => navigate(`/jobs/${interview.applications?.job_id || interview.job_offers?.job_id}`)}
+                  >View Details</button>
+                  <button
+                    className="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg font-semibold hover:bg-blue-200 transition"
+                    onClick={() => setModal({ type: 'schedule', data: interview })}
+                  >Reschedule</button>
                 </div>
-              </div>
-              <div className="mt-4 md:mt-0 flex flex-col md:items-end space-y-2">
-                <button
-                  className="px-4 py-2 bg-[#185a9d] text-white rounded-lg font-semibold hover:bg-[#216aad] transition"
-                  onClick={() => navigate(`/jobs/${interview.applications?.job_id || interview.job_offers?.job_id}`)}
-                >View Details</button>
-                <button
-                  className="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg font-semibold hover:bg-blue-200 transition"
-                  onClick={() => setModal({ type: 'schedule', data: interview })}
-                >Reschedule</button>
-              </div>
-            </div>
+              </motion.div>
+            </AnimatePresence>
           ))}
         </div>
       )}
@@ -345,7 +376,7 @@ const MyJobs: React.FC = () => {
   );
 
   const renderSaved = (mobile: boolean) => (
-    <div>
+    <div className="pb-2">
       {loading ? (
         <div className="flex flex-col items-center justify-center h-64 text-emerald-400 animate-pulse">
           <FiBookmark className="w-12 h-12 mb-4" />
@@ -365,23 +396,30 @@ const MyJobs: React.FC = () => {
             <div>
               <h3 className={`text-lg font-bold mb-4 flex items-center ${mobile ? 'text-black' : 'text-gray-800'}`}><FiBriefcase className={`w-5 h-5 mr-2 ${mobile ? 'text-gray-500' : 'text-[#185a9d]'}`} />Saved Jobs</h3>
               <div className="space-y-6">
-                {savedJobs.map((fav) => (
-                  <div key={fav.id} className="bg-gray-50 rounded-xl shadow p-5 flex flex-col md:flex-row md:items-center md:justify-between hover:shadow-lg transition">
-                    <div className="flex-1">
+                {savedJobs.map((fav, idx) => (
+                  <AnimatePresence key={fav.id}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 20 }}
+                      transition={{ duration: 0.4, delay: idx * 0.05 }}
+                      className={`rounded-2xl shadow-md p-5 flex flex-col gap-3 relative overflow-hidden ${mobile ? 'bg-white border border-[#e3e8f0] mb-2' : 'bg-gray-50'}`}
+                    >
+                      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#185a9d] to-[#43cea2] rounded-l-2xl" />
                       <div className="flex items-center mb-2">
                         <span className={`font-bold text-lg mr-2 ${mobile ? 'text-black' : 'text-[#185a9d]'}`}>{fav.jobs?.title || 'Job Title'}</span>
                         <span className="text-gray-500 text-sm">{fav.jobs?.company || 'Company Name'}</span>
                       </div>
                       <div className="text-gray-500 text-sm mb-1">{renderLocation(fav.jobs?.location)}</div>
                       <div className="text-xs text-gray-400">Saved: {new Date(fav.created_at).toLocaleDateString()}</div>
-                    </div>
-                    <div className="mt-4 md:mt-0 flex flex-col md:items-end space-y-2">
-                      <button
-                        className="px-4 py-2 bg-[#185a9d] text-white rounded-lg font-semibold hover:bg-[#216aad] transition"
-                        onClick={() => navigate(`/jobs/${fav.job_id}`)}
-                      >View Details</button>
-                    </div>
-                  </div>
+                      <div className="flex flex-col gap-2 mt-3">
+                        <button
+                          className="px-4 py-2 bg-gradient-to-r from-[#185a9d] to-[#43cea2] text-white rounded-xl font-semibold shadow hover:scale-105 transition"
+                          onClick={() => navigate(`/jobs/${fav.job_id}`)}
+                        >View Details</button>
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
                 ))}
               </div>
             </div>
@@ -391,23 +429,30 @@ const MyJobs: React.FC = () => {
             <div>
               <h3 className={`text-lg font-bold mb-4 flex items-center ${mobile ? 'text-black' : 'text-gray-800'}`}><FiBriefcase className={`w-5 h-5 mr-2 ${mobile ? 'text-gray-500' : 'text-[#185a9d]'}`} />Saved Internships</h3>
               <div className="space-y-6">
-                {savedInternships.map((fav) => (
-                  <div key={fav.id} className="bg-blue-50 rounded-xl shadow p-5 flex flex-col md:flex-row md:items-center md:justify-between hover:shadow-lg transition">
-                    <div className="flex-1">
+                {savedInternships.map((fav, idx) => (
+                  <AnimatePresence key={fav.id}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 20 }}
+                      transition={{ duration: 0.4, delay: idx * 0.05 }}
+                      className={`rounded-2xl shadow-md p-5 flex flex-col gap-3 relative overflow-hidden ${mobile ? 'bg-white border border-[#e3e8f0] mb-2' : 'bg-blue-50'}`}
+                    >
+                      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#185a9d] to-[#43cea2] rounded-l-2xl" />
                       <div className="flex items-center mb-2">
                         <span className={`font-bold text-lg mr-2 ${mobile ? 'text-black' : 'text-[#185a9d]'}`}>{fav.internships?.title || 'Internship Title'}</span>
                         <span className="text-gray-500 text-sm">{fav.internships?.company || 'Company Name'}</span>
                       </div>
                       <div className="text-gray-500 text-sm mb-1">{renderLocation(fav.internships?.location)}</div>
                       <div className="text-xs text-gray-400">Saved: {new Date(fav.created_at).toLocaleDateString()}</div>
-                    </div>
-                    <div className="mt-4 md:mt-0 flex flex-col md:items-end space-y-2">
-                      <button
-                        className="px-4 py-2 bg-[#185a9d] text-white rounded-lg font-semibold hover:bg-[#216aad] transition"
-                        onClick={() => navigate(`/internships/${fav.internship_id}`)}
-                      >View Details</button>
-                    </div>
-                  </div>
+                      <div className="flex flex-col gap-2 mt-3">
+                        <button
+                          className="px-4 py-2 bg-gradient-to-r from-[#185a9d] to-[#43cea2] text-white rounded-xl font-semibold shadow hover:scale-105 transition"
+                          onClick={() => navigate(`/internships/${fav.internship_id}`)}
+                        >View Details</button>
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
                 ))}
               </div>
             </div>
@@ -529,32 +574,35 @@ const MyJobs: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9]">
+    <div className={isMobile ? "min-h-screen bg-[#f4f6fa] px-2 pt-4 pb-20" : "min-h-screen bg-[#f1f5f9]"}>
       {isMobile ? (
         <>
-          {/* Main Card/Section (mobile padding, rounded, shadow) */}
-          <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-lg p-4 mt-4 mb-8">
+          {/* Main Card/Section (mobile, soft background, safe padding) */}
+          <div className="w-full max-w-md mx-auto bg-[#f8fafc] rounded-3xl shadow-xl p-5 mt-4 mb-10 border border-[#e3e8f0]" style={{marginLeft: 'auto', marginRight: 'auto'}}>
             {/* Header */}
-            <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h1 className="text-2xl font-extrabold text-black mb-2">My Jobs</h1>
-                <p className="text-gray-500">Track your job applications, offers, and interviews in one place.</p>
-              </div>
+            <div className="mb-8 flex flex-col items-center">
+              <div className="w-12 h-1 rounded-full bg-[#b6c6e3] mb-3" />
+              <h1 className="text-3xl font-extrabold text-[#234567] mb-1 tracking-tight">My Jobs</h1>
+              <p className="text-gray-600 text-center text-base font-medium">Track your job applications, offers, and interviews in one place.</p>
             </div>
 
             {/* Tabs */}
-            <div className="mb-8">
-              <nav className="flex space-x-2 bg-white rounded-xl shadow p-2">
+            <div className="mb-8 overflow-x-auto">
+              <nav className="flex space-x-2 bg-[#e3e8f0] rounded-xl shadow p-2 min-w-full">
                 {TABS.map(tab => {
                   const Icon = tab.icon;
                   return (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center px-5 py-3 rounded-lg font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400
-                        ${activeTab === tab.id ? 'bg-gray-100 text-black shadow' : 'text-gray-600 hover:bg-gray-50 hover:text-black'}`}
+                      className={`flex items-center px-4 py-2 rounded-full font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#b6c6e3] whitespace-nowrap text-sm shadow-sm
+                        ${activeTab === tab.id
+                          ? 'bg-[#234567] text-white scale-105 shadow-lg'
+                          : 'text-[#234567] bg-white hover:bg-[#e3e8f0] hover:text-[#234567]'}
+                      `}
+                      style={{ minWidth: 110 }}
                     >
-                      <Icon className="w-5 h-5 mr-2 text-gray-500" />
+                      <Icon className={`w-5 h-5 mr-2 ${activeTab === tab.id ? 'text-white' : 'text-[#b6c6e3]'}`} />
                       {tab.label}
                     </button>
                   );
@@ -563,7 +611,7 @@ const MyJobs: React.FC = () => {
             </div>
 
             {/* Tab Content */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 min-h-[400px]">
+            <div className="bg-[#f4f6fa] rounded-2xl shadow-lg p-4 min-h-[400px] transition-all duration-300">
               {activeTab === 'applied' && renderAppliedJobs(true)}
               {activeTab === 'offers' && renderJobOffers(true)}
               {activeTab === 'interviews' && renderInterviews(true)}
@@ -584,14 +632,14 @@ const MyJobs: React.FC = () => {
 
             {/* Tabs */}
             <div className="mb-8">
-              <nav className="flex space-x-2 bg-white rounded-xl shadow p-2">
+              <nav className="flex space-x-2 bg-white rounded-xl shadow p-2 h-12">
                 {TABS.map(tab => {
                   const Icon = tab.icon;
                   return (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center px-5 py-3 rounded-lg font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#185a9d]
+                      className={`flex items-center px-5 py-3 rounded-lg font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#185a9d] h-12 min-h-full flex-1
                         ${activeTab === tab.id ? 'bg-[#e3f0fa] text-[#185a9d] shadow' : 'text-gray-600 hover:bg-[#f1f5f9] hover:text-[#185a9d]'}`}
                     >
                       <Icon className="w-5 h-5 mr-2" />

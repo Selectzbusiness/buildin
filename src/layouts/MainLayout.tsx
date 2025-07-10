@@ -5,7 +5,6 @@ import { supabase } from '../config/supabase';
 import UploadsModal from '../components/UploadsModal';
 import AdvancedSearch from '../components/AdvancedSearch';
 import NotificationCenter from '../components/NotificationCenter';
-import MessagingSystem from '../components/MessagingSystem';
 import AIAssistant from '../components/AIAssistant';
 import useIsMobile from '../hooks/useIsMobile';
 import MainLayoutMobile from './mobile/MainLayoutMobile';
@@ -15,7 +14,6 @@ const MainLayout: React.FC = () => {
   const [showUploadsModal, setShowUploadsModal] = useState(false);
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showMessaging, setShowMessaging] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { user, profile } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -214,16 +212,6 @@ const MainLayout: React.FC = () => {
                         </Link>
                         
                         <Link
-                          to="#"
-                          className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-[#e3f0fa] transition-colors duration-200 rounded-md"
-                          onClick={(e) => { e.preventDefault(); setShowMessaging(true); setIsDropdownOpen(false); }}
-                        >
-                          <svg className="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
-                          Inbox
-                        </Link>
-                        <Link
                           to="/my-jobs"
                           className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
                           onClick={() => setIsDropdownOpen(false)}
@@ -383,22 +371,6 @@ const MainLayout: React.FC = () => {
               &times;
             </button>
             <NotificationCenter />
-          </div>
-        </div>
-      )}
-
-      {/* Messaging System Modal (Inbox) */}
-      {showMessaging && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-3xl w-full relative">
-            <button
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl"
-              onClick={() => setShowMessaging(false)}
-              aria-label="Close Messaging"
-            >
-              &times;
-            </button>
-            <MessagingSystem currentRole={profile?.company_id ? 'employer' : 'jobseeker'} />
           </div>
         </div>
       )}

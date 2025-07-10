@@ -41,8 +41,7 @@ import SavedJobSeekerVideos from './pages/employer/SavedJobSeekerVideos';
 import Credits from './pages/employer/Credits';
 import MyJobs from './pages/jobseeker/MyJobs';
 import Favourites from './pages/jobseeker/Favourites';
-import MessagingSystem from './components/MessagingSystem';
-import Inbox from './pages/jobseeker/Inbox';
+import NotificationsPage from './pages/notifications';
 
 // Footer Components
 import Careers from './components/Careers';
@@ -163,7 +162,7 @@ const App: React.FC = () => {
               } />
               <Route path="my-jobs" element={<MyJobs />} />
               <Route path="favourites" element={<Favourites />} />
-              <Route path="inbox" element={<RoleProtectedRoute allowedRole="jobseeker"><Inbox /></RoleProtectedRoute>} />
+              <Route path="notifications" element={<NotificationsPage />} />
                 
                 {/* Footer Pages */}
                 <Route path="careers" element={<Careers />} />
@@ -210,7 +209,6 @@ const App: React.FC = () => {
               <Route path="reels" element={<JobSeekerReels />} />
               <Route path="saved-videos" element={<SavedJobSeekerVideos />} />
               <Route path="credits" element={<Credits />} />
-              <Route path="inbox" element={<RoleProtectedRoute allowedRole="employer"><MessagingSystem currentRole="employer" /></RoleProtectedRoute>} />
                 
                 {/* Footer Pages */}
                 <Route path="careers" element={<Careers />} />

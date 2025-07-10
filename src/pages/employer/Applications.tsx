@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../config/supabase';
 import { AuthContext } from '../../contexts/AuthContext';
+import { format } from 'date-fns';
 import { 
   FaBriefcase, 
   FaGraduationCap, 
@@ -14,9 +15,10 @@ import {
   FaCheckCircle, 
   FaTimes, 
   FaClock, 
-  FaChartLine
+  FaChartLine,
+  FaPaperPlane,
+  FaUndo
 } from 'react-icons/fa';
-import MessagingSystem from '../../components/MessagingSystem';
 import Modal from '../../components/Modal';
 import useIsMobile from '../../hooks/useIsMobile';
 
@@ -54,8 +56,17 @@ interface InternshipApplication {
   user?: Applicant;
 }
 
+const ACTIONS = [
+  { key: 'shortlisted', label: 'Shortlist' },
+  { key: 'rejected', label: 'Reject' },
+  { key: 'interview_scheduled', label: 'Invite for Interview' },
+  { key: 'video_requested', label: 'Request Video Resume' },
+];
+
 const Applications: React.FC = () => {
   const { profile } = useContext(AuthContext);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [internships, setInternships] = useState<Internship[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [internshipApplications, setInternshipApplications] = useState<InternshipApplication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,20 +101,21 @@ const Applications: React.FC = () => {
         // Fetch jobs for this company
         const { data: jobsData, error: jobsError } = await supabase
           .from('jobs')
-          .select('id')
+          .select('id, title')
           .eq('company_id', companyData.id);
         if (jobsError) throw jobsError;
-        const jobIds = (jobsData || []).map((job: any) => job.id);
+        setJobs(jobsData || []);
         // Fetch internships for this company
         const { data: internshipsData, error: internshipsError } = await supabase
           .from('internships')
-          .select('id')
+          .select('id, title')
           .eq('company_id', companyData.id);
         if (internshipsError) throw internshipsError;
-        const internshipIds = (internshipsData || []).map((i: any) => i.id);
+        setInternships(internshipsData || []);
+
         // Fetch job applications
         let mapped: Application[] = [];
-        if (jobIds.length > 0) {
+        if (jobsData.length > 0) {
           const { data, error } = await supabase
             .from('applications')
             .select(`
@@ -111,9 +123,9 @@ const Applications: React.FC = () => {
               created_at,
               status,
               jobs (id, title),
-              user:profiles!job_seeker_id (id, auth_id, full_name)
+              user:profiles!job_seeker_id (id, auth_id, full_name, intro_video_url, resume_url)
             `)
-            .in('job_id', jobIds)
+            .in('job_id', jobsData.map(job => job.id))
             .order('created_at', { ascending: false });
           if (error) throw error;
           mapped = (data as any[]).map(app => ({
@@ -127,7 +139,7 @@ const Applications: React.FC = () => {
         setApplications(mapped);
         // Fetch internship applications
         let mappedIntern: InternshipApplication[] = [];
-        if (internshipIds.length > 0) {
+        if (internshipsData.length > 0) {
           const { data, error } = await supabase
             .from('internship_applications')
             .select(`
@@ -135,9 +147,9 @@ const Applications: React.FC = () => {
               created_at,
               status,
               internship:internships!internship_id (id, title),
-              user:profiles!job_seeker_id (id, auth_id, full_name)
+              user:profiles!job_seeker_id (id, auth_id, full_name, intro_video_url, resume_url)
             `)
-            .in('internship_id', internshipIds)
+            .in('internship_id', internshipsData.map(internship => internship.id))
             .order('created_at', { ascending: false });
           if (error) throw error;
           mappedIntern = (data as any[]).map(app => ({
@@ -159,6 +171,125 @@ const Applications: React.FC = () => {
     fetchAllApplications();
   }, [profile]);
   
+  // Test function to debug notification creation
+  const testNotificationCreation = async (userId: string) => {
+    try {
+      const testPayload = {
+        user_id: userId,
+        title: 'Test Notification',
+        message: 'This is a test notification',
+        type: 'system',
+        read: false,
+        channel: 'in-app'
+      };
+
+      console.log('Testing notification creation with payload:', testPayload);
+      
+      const { data, error } = await supabase
+        .from('notifications')
+        .insert([testPayload])
+        .select();
+
+      if (error) {
+        console.error('Test notification creation failed:', error);
+        return false;
+      } else {
+        console.log('Test notification created successfully:', data);
+        return true;
+      }
+    } catch (err) {
+      console.error('Test notification creation error:', err);
+      return false;
+    }
+  };
+
+  const handleInternshipStatusChange = async (applicationId: string, newStatus: string) => {
+    try {
+      console.log('Starting internship status update for:', applicationId, 'to status:', newStatus);
+      
+      // 1. Update the internship application status
+      const { error } = await supabase
+        .from('internship_applications')
+        .update({ status: newStatus })
+        .eq('id', applicationId);
+
+      if (error) {
+        console.error('Error updating internship application status:', error);
+        throw error;
+      }
+
+      console.log('Internship application status updated successfully');
+
+      // 2. Fetch the updated application to get the job_seeker_id
+      const { data: appData, error: fetchError } = await supabase
+        .from('internship_applications')
+        .select('id, job_seeker_id')
+        .eq('id', applicationId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching updated internship application:', fetchError);
+        throw fetchError;
+      }
+
+      console.log('Fetched application data:', appData);
+
+      if (appData && appData.id && appData.job_seeker_id) {
+        // Test notification creation first
+        const testResult = await testNotificationCreation(appData.job_seeker_id);
+        console.log('Test notification result:', testResult);
+
+        // Construct notification object with only the required keys
+        const notification = {
+          user_id: appData.job_seeker_id,
+          internship_application_id: appData.id,
+          title: `Internship Application Status Updated`,
+          message: `Your internship application status has been updated to "${newStatus}"`,
+          type: 'application',
+          read: false,
+          channel: 'in-app'
+        };
+
+        // Debug: log the notification object and its keys
+        console.log('Notification payload:', notification);
+        console.log('Notification payload keys:', Object.keys(notification));
+
+        // Insert notification directly
+        const { data: notifData, error: notifError } = await supabase
+          .from('notifications')
+          .insert([notification])
+          .select();
+        
+        if (notifError) {
+          console.error('Error creating internship notification:', notifError);
+          console.error('Error details:', {
+            code: notifError.code,
+            message: notifError.message,
+            details: notifError.details,
+            hint: notifError.hint
+          });
+        } else {
+          console.log('Internship notification created successfully:', notifData);
+        }
+      } else {
+        console.error('Internship application not found or missing job_seeker_id for notification.');
+        console.error('App data:', appData);
+      }
+
+      // Update the UI state
+      setInternshipApplications(prev => 
+        prev.map(app => 
+          app.id === applicationId ? { ...app, status: newStatus } : app
+        )
+      );
+      
+      console.log('UI state updated successfully');
+    } catch (err) {
+      console.error('Error updating internship status:', err);
+      // You might want to show a toast error here
+    }
+  };
+
   const handleStatusChange = async (applicationId: string, newStatus: string) => {
     try {
       const { error } = await supabase
@@ -167,6 +298,35 @@ const Applications: React.FC = () => {
         .eq('id', applicationId);
 
       if (error) throw error;
+
+      // Fetch the updated application to get the job_seeker_id
+      const { data: appData, error: fetchError } = await supabase
+        .from('applications')
+        .select('id, job_seeker_id')
+        .eq('id', applicationId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (appData && appData.id && appData.job_seeker_id) {
+        // Insert notification for job application (do NOT include internship_application_id)
+        const { error: notifError } = await supabase
+          .from('notifications')
+          .insert([{
+            user_id: appData.job_seeker_id,
+            application_id: appData.id,
+            title: `Job Application Status Updated`,
+            message: `Your job application status has been updated to "${newStatus}"`,
+            type: 'application', // <-- use allowed value
+            read: false,
+            channel: 'in-app'
+          }]);
+        if (notifError) {
+          console.error('Error creating job notification:', notifError);
+        }
+      } else {
+        console.error('Job application not found or missing job_seeker_id for notification.');
+      }
 
       setApplications(prev => 
         prev.map(app => 
@@ -178,44 +338,61 @@ const Applications: React.FC = () => {
     }
   };
 
-  const handleInternshipStatusChange = async (applicationId: string, newStatus: string) => {
-    try {
-      const { error } = await supabase
+  const handleAction = async (type: string, app: any, isInternship = false) => {
+    if (isInternship) {
+      await supabase
         .from('internship_applications')
-        .update({ status: newStatus })
-        .eq('id', applicationId);
-
-      if (error) throw error;
-
-      setInternshipApplications(prev => 
-        prev.map(app => 
-          app.id === applicationId ? { ...app, status: newStatus } : app
-        )
-      );
-    } catch (err) {
-      console.error('Error updating internship status:', err);
+        .update({ status: type, status_updated_at: new Date() })
+        .eq('id', app.id);
+      await supabase
+        .from('application_actions')
+        .insert({
+          internship_application_id: app.id,
+          action: type,
+          performed_by: profile?.id,
+          notes: null,
+        });
+    } else {
+      await supabase
+        .from('applications')
+        .update({ status: type, status_updated_at: new Date() })
+        .eq('id', app.id);
+      await supabase
+        .from('application_actions')
+        .insert({
+          application_id: app.id,
+          action: type,
+          performed_by: profile?.id,
+          notes: null,
+        });
     }
+    // Optionally, refresh data
+    // ...
   };
 
   // Helper functions for enhanced UI
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'submitted': return 'bg-gray-100 text-gray-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'reviewed': return 'bg-blue-100 text-blue-800';
       case 'shortlisted': return 'bg-green-100 text-green-800';
       case 'rejected': return 'bg-red-100 text-red-800';
-      case 'hired': return 'bg-purple-100 text-purple-800';
+      case 'accepted': return 'bg-purple-100 text-purple-800';
+      case 'withdrawn': return 'bg-gray-100 text-gray-600';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case 'submitted': return <FaPaperPlane className="w-3 h-3" />;
       case 'pending': return <FaClock className="w-3 h-3" />;
       case 'reviewed': return <FaEye className="w-3 h-3" />;
       case 'shortlisted': return <FaStar className="w-3 h-3" />;
       case 'rejected': return <FaTimes className="w-3 h-3" />;
-      case 'hired': return <FaCheckCircle className="w-3 h-3" />;
+      case 'accepted': return <FaCheckCircle className="w-3 h-3" />;
+      case 'withdrawn': return <FaUndo className="w-3 h-3" />;
       default: return <FaClock className="w-3 h-3" />;
     }
   };
@@ -240,10 +417,13 @@ const Applications: React.FC = () => {
   // Calculate stats
   const stats = {
     total: applications.length + internshipApplications.length,
+    submitted: [...applications, ...internshipApplications].filter(app => app.status === 'submitted').length,
     pending: [...applications, ...internshipApplications].filter(app => app.status === 'pending').length,
     reviewed: [...applications, ...internshipApplications].filter(app => app.status === 'reviewed').length,
     shortlisted: [...applications, ...internshipApplications].filter(app => app.status === 'shortlisted').length,
     rejected: [...applications, ...internshipApplications].filter(app => app.status === 'rejected').length,
+    accepted: [...applications, ...internshipApplications].filter(app => app.status === 'accepted').length,
+    withdrawn: [...applications, ...internshipApplications].filter(app => app.status === 'withdrawn').length,
   };
 
   if (loading) {
@@ -347,10 +527,13 @@ const Applications: React.FC = () => {
             className="px-2 py-2 rounded-lg border border-gray-200 bg-white text-sm"
           >
             <option value="all">All</option>
+            <option value="submitted">Submitted</option>
             <option value="pending">Pending</option>
             <option value="reviewed">Reviewed</option>
             <option value="shortlisted">Shortlisted</option>
             <option value="rejected">Rejected</option>
+            <option value="accepted">Accepted</option>
+            <option value="withdrawn">Withdrawn</option>
           </select>
         </div>
         {/* Applications List */}
@@ -380,17 +563,14 @@ const Applications: React.FC = () => {
                       onChange={e => handleStatusChange(application.id, e.target.value)}
                       className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
                     >
+                      <option value="submitted">Submitted</option>
                       <option value="pending">Pending</option>
                       <option value="reviewed">Reviewed</option>
                       <option value="shortlisted">Shortlisted</option>
                       <option value="rejected">Rejected</option>
+                      <option value="accepted">Accepted</option>
+                      <option value="withdrawn">Withdrawn</option>
                     </select>
-                    <button
-                      className="flex-1 py-2 rounded-lg bg-[#185a9d] text-white text-xs font-semibold shadow"
-                      onClick={() => { setMessageTargetId(application.user?.auth_id || null); setIsMessageModalOpen(true); }}
-                    >
-                      Message
-                    </button>
                     <Link
                       to={`/employer/job-seeker-profile/${application.user?.id}`}
                       className="flex-1 py-2 rounded-lg bg-gray-100 text-[#185a9d] text-xs font-semibold text-center shadow"
@@ -427,17 +607,14 @@ const Applications: React.FC = () => {
                       onChange={e => handleInternshipStatusChange(application.id, e.target.value)}
                       className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
                     >
+                      <option value="submitted">Submitted</option>
                       <option value="pending">Pending</option>
                       <option value="reviewed">Reviewed</option>
                       <option value="shortlisted">Shortlisted</option>
                       <option value="rejected">Rejected</option>
+                      <option value="accepted">Accepted</option>
+                      <option value="withdrawn">Withdrawn</option>
                     </select>
-                    <button
-                      className="flex-1 py-2 rounded-lg bg-[#185a9d] text-white text-xs font-semibold shadow"
-                      onClick={() => { setMessageTargetId(application.user?.auth_id || null); setIsMessageModalOpen(true); }}
-                    >
-                      Message
-                    </button>
                     <Link
                       to={`/employer/job-seeker-profile/${application.user?.id}`}
                       className="flex-1 py-2 rounded-lg bg-gray-100 text-[#185a9d] text-xs font-semibold text-center shadow"
@@ -450,20 +627,6 @@ const Applications: React.FC = () => {
             )
           )}
         </div>
-        {/* Message Modal */}
-        {isMessageModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 animate-fade-in">
-            <div className="relative w-full max-w-lg p-2">
-              {messageTargetId ? (
-                <MessagingSystem
-                  initialTargetId={messageTargetId}
-                  onClose={() => setIsMessageModalOpen(false)}
-                  currentRole="employer"
-                />
-              ) : null}
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -592,10 +755,13 @@ const Applications: React.FC = () => {
                 className="w-full pl-10 pr-8 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#185a9d] focus:border-transparent bg-white/50 backdrop-blur-sm appearance-none"
               >
                 <option value="all">All Status</option>
+                <option value="submitted">Submitted</option>
                 <option value="pending">Pending</option>
                 <option value="reviewed">Reviewed</option>
                 <option value="shortlisted">Shortlisted</option>
                 <option value="rejected">Rejected</option>
+                <option value="accepted">Accepted</option>
+                <option value="withdrawn">Withdrawn</option>
               </select>
             </div>
             <div className="flex items-center justify-end">
@@ -652,10 +818,13 @@ const Applications: React.FC = () => {
                           onChange={(e) => handleStatusChange(application.id, e.target.value)}
                           className="rounded-lg border border-gray-200 px-3 py-1 focus:ring-2 focus:ring-[#185a9d] focus:border-transparent text-sm"
                         >
+                          <option value="submitted">Submitted</option>
                           <option value="pending">Pending</option>
                           <option value="reviewed">Reviewed</option>
                           <option value="shortlisted">Shortlisted</option>
                           <option value="rejected">Rejected</option>
+                          <option value="accepted">Accepted</option>
+                          <option value="withdrawn">Withdrawn</option>
                         </select>
                         <div className="flex items-center space-x-2">
                           <Link
@@ -666,13 +835,6 @@ const Applications: React.FC = () => {
                             <FaUser className="w-4 h-4" />
                           </Link>
                         </div>
-                        <button
-                          className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
-                          title="Message Applicant"
-                          onClick={() => { setMessageTargetId(application.user?.auth_id || null); setIsMessageModalOpen(true); }}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                        </button>
                       </div>
                     </div>
             </div>
@@ -725,10 +887,13 @@ const Applications: React.FC = () => {
                           onChange={(e) => handleInternshipStatusChange(application.id, e.target.value)}
                           className="rounded-lg border border-gray-200 px-3 py-1 focus:ring-2 focus:ring-[#185a9d] focus:border-transparent text-sm"
                         >
+                          <option value="submitted">Submitted</option>
                           <option value="pending">Pending</option>
                           <option value="reviewed">Reviewed</option>
                           <option value="shortlisted">Shortlisted</option>
                           <option value="rejected">Rejected</option>
+                          <option value="accepted">Accepted</option>
+                          <option value="withdrawn">Withdrawn</option>
                         </select>
                         <div className="flex items-center space-x-2">
                           <Link
@@ -739,13 +904,6 @@ const Applications: React.FC = () => {
                             <FaUser className="w-4 h-4" />
                           </Link>
                         </div>
-                        <button
-                          className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
-                          title="Message Applicant"
-                          onClick={() => { setMessageTargetId(application.user?.auth_id || null); setIsMessageModalOpen(true); }}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                        </button>
                       </div>
                     </div>
             </div>
@@ -755,21 +913,6 @@ const Applications: React.FC = () => {
       )}
         </div>
       </div>
-
-      {/* Message Modal */}
-      {isMessageModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 animate-fade-in">
-          <div className="relative w-full max-w-5xl p-2">
-            {messageTargetId ? (
-              <MessagingSystem
-                initialTargetId={messageTargetId}
-                onClose={() => setIsMessageModalOpen(false)}
-                currentRole="employer"
-              />
-            ) : null}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

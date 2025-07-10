@@ -2,7 +2,8 @@ import React, { useState, useContext } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
 import UploadsModal from '../../components/UploadsModal';
-import { FiUser, FiSettings, FiHeart, FiBriefcase, FiLogOut, FiArrowRight, FiHome, FiInbox, FiUpload } from 'react-icons/fi';
+import NotificationCenter from '../../components/NotificationCenter';
+import { FiUser, FiSettings, FiHeart, FiBriefcase, FiLogOut, FiArrowRight, FiHome, FiUpload, FiBell } from 'react-icons/fi';
 import { supabase } from '../../config/supabase';
 import toast from 'react-hot-toast';
 
@@ -12,6 +13,21 @@ const MainLayoutMobile: React.FC = () => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  React.useEffect(() => {
+    async function fetchUnread() {
+      if (!profile?.auth_id) return;
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('id, read')
+        .eq('user_id', profile.auth_id)
+        .eq('read', false);
+      if (!error && data) setUnreadCount(data.length);
+    }
+    fetchUnread();
+    // Optionally, set up polling or real-time updates here
+  }, [profile?.auth_id]);
 
   // Updated bottom nav config
   const navItems = [
@@ -31,9 +47,18 @@ const MainLayoutMobile: React.FC = () => {
       action: () => setShowUploadsModal(true),
     },
     {
-      name: 'Inbox',
-      icon: <FiInbox className="w-6 h-6" style={{ color: '#f59e42' }} />,
-      path: '/inbox',
+      name: 'Notifications',
+      icon: (
+        <span className="relative">
+          <FiBell className="w-6 h-6" style={{ color: '#fbbf24' }} />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold border-2 border-white animate-bounce">
+              {unreadCount}
+            </span>
+          )}
+        </span>
+      ),
+      path: '/notifications',
     },
     {
       name: 'Profile',
@@ -55,8 +80,6 @@ const MainLayoutMobile: React.FC = () => {
           />
           <span className="text-lg font-bold text-[#185a9d] tracking-tight">Selectz</span>
         </div>
-        
-        {/* Login/Signup button - only show if user is not logged in */}
         {!profile && (
           <button
             onClick={() => navigate('/login')}
@@ -66,15 +89,13 @@ const MainLayoutMobile: React.FC = () => {
           </button>
         )}
       </div>
-
       {/* Main Content - Card style */}
       <main className="flex-1 pt-2 pb-20 px-2">
         <div className="card p-2 bg-white/90 shadow-lg rounded-2xl">
           <Outlet />
         </div>
       </main>
-
-      {/* Airbnb-style Bottom Navigation */}
+      {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 flex justify-between items-center px-2 h-16">
         {navItems.map((item, idx) => (
           <button
@@ -87,10 +108,8 @@ const MainLayoutMobile: React.FC = () => {
           </button>
         ))}
       </nav>
-
       {/* Uploads Modal */}
       <UploadsModal isOpen={showUploadsModal} onClose={() => setShowUploadsModal(false)} />
-
       {/* Profile Dropdown Modal */}
       {showProfileMenu && (
         <div className="fixed inset-0 z-50 bg-white flex flex-col">

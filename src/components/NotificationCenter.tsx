@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { supabase } from '../config/supabase';
+import { formatDistanceToNow } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { FiBell, FiCheckCircle, FiXCircle, FiClock, FiVideo, FiMail, FiInfo } from 'react-icons/fi';
 
 interface Notification {
   id: string;
@@ -19,6 +22,7 @@ const NotificationCenter: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
@@ -74,8 +78,9 @@ const NotificationCenter: React.FC = () => {
 
       if (error) throw error;
 
-      setNotifications(prev =>
-        prev.map(n =>
+      // Update local state immediately for better UX
+      setNotifications(prev => 
+        prev.map(n => 
           n.id === notificationId ? { ...n, read: true } : n
         )
       );
@@ -85,22 +90,9 @@ const NotificationCenter: React.FC = () => {
     }
   };
 
-  const markAllAsRead = async () => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('user_id', user?.id)
-        .eq('read', false);
-
-      if (error) throw error;
-
-      setNotifications(prev =>
-        prev.map(n => ({ ...n, read: true }))
-      );
-      setUnreadCount(0);
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+  const handleClick = (notif: Notification) => {
+    if (!notif.read) {
+      markAsRead(notif.id);
     }
   };
 
@@ -161,6 +153,8 @@ const NotificationCenter: React.FC = () => {
     return date.toLocaleDateString();
   };
 
+  const isMobile = () => typeof window !== 'undefined' && window.innerWidth < 640;
+
   if (loading) {
     return (
       <div className="bg-white rounded-2xl shadow-lg p-6 animate-fade-in">
@@ -180,54 +174,89 @@ const NotificationCenter: React.FC = () => {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 animate-fade-in max-h-[80vh] overflow-y-auto w-full">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center space-x-2">
-          <h2 className="text-xl font-semibold text-gray-900">Notifications</h2>
+    <div className={isMobile() ? "bg-[#f1f5f9] min-h-screen flex flex-col" : "bg-white rounded-2xl shadow-2xl p-0 animate-fade-in max-h-[80vh] overflow-y-auto w-full max-w-lg border border-gray-100"}>
+      {/* Header */}
+      {isMobile() ? (
+        <header className="sticky top-0 z-10 bg-gradient-to-r from-[#e3f0fa] to-[#f8fafc] flex items-center gap-3 px-4 py-4 border-b border-gray-100 shadow-sm">
+          <FiBell className="w-7 h-7 text-[#185a9d]" />
+          <h1 className="text-2xl font-bold text-[#185a9d] tracking-tight">Notifications</h1>
           {unreadCount > 0 && (
-            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-bounce">
+            <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-bounce font-semibold">
               {unreadCount}
             </span>
           )}
+        </header>
+      ) : (
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-[#e3f0fa] to-[#f8fafc] rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <FiBell className="w-7 h-7 text-[#185a9d]" />
+            <h2 className="text-2xl font-bold text-[#185a9d] tracking-tight">Notifications</h2>
+            {unreadCount > 0 && (
+              <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-bounce font-semibold">
+                {unreadCount}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          {unreadCount > 0 && (
-            <button
-              onClick={markAllAsRead}
-              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors duration-200"
-            >
-              Mark all as read
-            </button>
-          )}
-        </div>
-      </div>
-      <div className="space-y-4">
+      )}
+      <div className={isMobile() ? "flex-1 flex flex-col gap-2 p-0" : "space-y-0 divide-y divide-gray-100"}>
         {notifications.length === 0 ? (
-          <div className="text-center text-gray-500 py-12">No notifications yet.</div>
+          <div className="flex flex-col items-center justify-center py-16 px-6">
+            <FiInfo className="w-12 h-12 text-gray-300 mb-4" />
+            <div className="text-lg font-semibold text-gray-500 mb-2">No notifications yet</div>
+            <div className="text-gray-400 text-sm">You'll see updates about your applications here.</div>
+          </div>
         ) : (
-          notifications.map((n) => (
-            <div
-              key={n.id}
-              className={`flex items-start gap-4 p-4 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer group ${n.read ? 'bg-gray-50' : 'bg-emerald-50 border-l-4 border-emerald-400'}`}
-              onClick={() => markAsRead(n.id)}
-              tabIndex={0}
-              onKeyDown={e => { if (e.key === 'Enter') markAsRead(n.id); }}
-            >
-              <div className="flex-shrink-0">{getNotificationIcon(n.type)}</div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className={`font-semibold ${n.read ? 'text-gray-700' : 'text-emerald-700'}`}>{n.title}</span>
-                  {!n.read && <span className="ml-2 bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full">New</span>}
+          notifications.map((n, idx) => {
+            // Determine status chip and icon
+            let statusChip = null;
+            let icon = <FiMail className="w-5 h-5 text-blue-400" />;
+            if (/shortlist|accepted/i.test(n.title)) {
+              statusChip = <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm font-semibold ml-2">Accepted</span>;
+              icon = <FiCheckCircle className="w-6 h-6 text-emerald-500" />;
+            } else if (/reject/i.test(n.title)) {
+              statusChip = <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm font-semibold ml-2">Rejected</span>;
+              icon = <FiXCircle className="w-6 h-6 text-red-500" />;
+            } else if (/interview/i.test(n.title)) {
+              statusChip = <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-semibold ml-2">Interview</span>;
+              icon = <FiClock className="w-6 h-6 text-blue-500" />;
+            } else if (/video/i.test(n.title)) {
+              statusChip = <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-sm font-semibold ml-2">Video</span>;
+              icon = <FiVideo className="w-6 h-6 text-orange-500" />;
+            }
+            return (
+              <div
+                key={n.id}
+                className={isMobile()
+                  ? `flex flex-col px-4 py-5 transition-all duration-200 group relative rounded-2xl shadow-sm bg-white border mb-2 cursor-pointer ${n.read ? 'border-gray-100 opacity-70' : 'border-red-400'} active:bg-blue-50`
+                  : `flex flex-col px-6 py-5 transition-all duration-200 group relative rounded-2xl shadow-sm bg-white border mb-2 cursor-pointer ${n.read ? 'border-gray-100 opacity-70' : 'border-red-400'} hover:bg-blue-50`}
+                tabIndex={0}
+                onClick={() => handleClick(n)}
+                onKeyDown={e => { if (e.key === 'Enter') handleClick(n); }}
+                style={isMobile() ? { boxShadow: n.read ? 'none' : '0 2px 8px 0 rgba(239,68,68,0.1)' } : { boxShadow: n.read ? 'none' : '0 2px 8px 0 rgba(239,68,68,0.1)' }}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 mt-1">{icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`font-semibold text-lg ${n.read ? 'text-gray-700' : 'text-[#185a9d]'}`}>{n.title}</span>
+                      {statusChip}
+                      {!n.read && <span className="ml-2 bg-red-500 text-white text-xs px-3 py-1 rounded-full font-semibold">New</span>}
+                    </div>
+                    <p className="text-gray-600 text-base mb-2 group-hover:text-gray-900 transition-colors duration-200">{n.message}</p>
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                      <FiClock className="w-4 h-4" />
+                      <span>{formatTimeAgo(n.created_at)}</span>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-gray-600 text-sm mt-1 line-clamp-2 group-hover:text-gray-900 transition-colors duration-200">{n.message}</p>
-                <div className="text-xs text-gray-400 mt-1">{formatTimeAgo(n.created_at)}</div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
   );
 };
 
-export default NotificationCenter; 
+export default NotificationCenter;

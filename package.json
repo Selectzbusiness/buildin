@@ -23,6 +23,7 @@
     "@types/recharts": "^1.8.29",
     "autoprefixer": "^10.4.17",
     "axios": "^1.9.0",
+    "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "dotenv": "^16.5.0",
     "framer-motion": "^12.19.1",

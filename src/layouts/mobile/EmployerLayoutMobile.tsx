@@ -22,9 +22,9 @@ const EmployerLayoutMobile: React.FC = () => {
     { name: 'Reels', icon: (
       <svg className="w-6 h-6 mb-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="#185a9d" strokeWidth="2"><rect x="3" y="5" width="15" height="14" rx="2"/><path d="M21 15V7a2 2 0 0 0-2-2h-2"/><polygon points="16 7 22 12 16 17 16 7"/></svg>
     ), path: '/employer/reels' },
-    { name: 'Saved', icon: (
-      <svg className="w-6 h-6 mb-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="#185a9d" strokeWidth="2"><path d="M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16l-7-3-7 3V5z"/></svg>
-    ), path: '/employer/saved-videos' },
+    { name: 'Posted', icon: (
+      <FiBriefcase className="w-6 h-6 mb-0.5" color="#185a9d" />
+    ), path: '/employer/posted-mobile' },
     { name: 'Applications', icon: (
       <svg className="w-6 h-6 mb-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#185a9d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M16 3v4a1 1 0 0 0 1 1h4"></path></svg>
     ), path: '/employer/applications' },
@@ -33,6 +33,7 @@ const EmployerLayoutMobile: React.FC = () => {
 
   // Menu modal items (all remaining options)
   const menuNavItems = [
+    { name: 'Saved Reels', path: '/employer/saved-videos', icon: <FiBookmark className="w-5 h-5 text-[#185a9d]" /> },
     { name: 'Billing', path: '/employer/billing', icon: <FiCreditCard className="w-5 h-5 text-[#185a9d]" /> },
     { name: 'Analytics', path: '/employer/analytics', icon: <FiBarChart2 className="w-5 h-5 text-[#185a9d]" /> },
     { name: 'Profile', path: '/employer/profile', icon: <FiUser className="w-5 h-5 text-[#185a9d]" /> },

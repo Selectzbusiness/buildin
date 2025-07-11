@@ -42,6 +42,7 @@ import Credits from './pages/employer/Credits';
 import MyJobs from './pages/jobseeker/MyJobs';
 import Favourites from './pages/jobseeker/Favourites';
 import NotificationsPage from './pages/notifications';
+import PostedMobile from './pages/employer/PostedMobile';
 
 // Footer Components
 import Careers from './components/Careers';
@@ -208,6 +209,7 @@ const App: React.FC = () => {
               <Route path="job-seeker-profile/:id" element={<EmployerJobSeekerProfileView />} />
               <Route path="reels" element={<JobSeekerReels />} />
               <Route path="saved-videos" element={<SavedJobSeekerVideos />} />
+              <Route path="posted-mobile" element={<PostedMobile />} />
               <Route path="credits" element={<Credits />} />
                 
                 {/* Footer Pages */}

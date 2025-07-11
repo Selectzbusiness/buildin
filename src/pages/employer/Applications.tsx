@@ -21,6 +21,7 @@ import {
 } from 'react-icons/fa';
 import Modal from '../../components/Modal';
 import useIsMobile from '../../hooks/useIsMobile';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Define types for data structures
 interface Applicant {
@@ -54,6 +55,7 @@ interface InternshipApplication {
   status: string;
   internship?: Internship;
   user?: Applicant;
+  job_seeker_id?: string; // Add this for clarity
 }
 
 const ACTIONS = [
@@ -239,6 +241,12 @@ const Applications: React.FC = () => {
         const testResult = await testNotificationCreation(appData.job_seeker_id);
         console.log('Test notification result:', testResult);
 
+        // Validate internship_application_id is a valid UUID
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(appData.id)) {
+          console.error('Invalid internship_application_id (not a UUID):', appData.id);
+          throw new Error('Invalid internship_application_id (not a UUID)');
+        }
         // Construct notification object with only the required keys
         const notification = {
           user_id: appData.job_seeker_id,
@@ -249,17 +257,13 @@ const Applications: React.FC = () => {
           read: false,
           channel: 'in-app'
         };
-
         // Debug: log the notification object and its keys
-        console.log('Notification payload:', notification);
-        console.log('Notification payload keys:', Object.keys(notification));
-
+        console.log('Notification payload (internship):', notification);
         // Insert notification directly
         const { data: notifData, error: notifError } = await supabase
           .from('notifications')
           .insert([notification])
           .select();
-        
         if (notifError) {
           console.error('Error creating internship notification:', notifError);
           console.error('Error details:', {
@@ -310,17 +314,18 @@ const Applications: React.FC = () => {
 
       if (appData && appData.id && appData.job_seeker_id) {
         // Insert notification for job application (do NOT include internship_application_id)
+        const notification = {
+          user_id: appData.job_seeker_id,
+          application_id: appData.id,
+          title: `Job Application Status Updated`,
+          message: `Your job application status has been updated to "${newStatus}"`,
+          type: 'application',
+          read: false,
+          channel: 'in-app'
+        };
         const { error: notifError } = await supabase
           .from('notifications')
-          .insert([{
-            user_id: appData.job_seeker_id,
-            application_id: appData.id,
-            title: `Job Application Status Updated`,
-            message: `Your job application status has been updated to "${newStatus}"`,
-            type: 'application', // <-- use allowed value
-            read: false,
-            channel: 'in-app'
-          }]);
+          .insert([notification]);
         if (notifError) {
           console.error('Error creating job notification:', notifError);
         }
@@ -472,6 +477,15 @@ const Applications: React.FC = () => {
   
   // --- MOBILE UI ---
   if (isMobile) {
+    const cardVariants = {
+      hidden: { opacity: 0, y: 30, scale: 0.97 },
+      visible: (i: number) => ({
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        transition: { delay: i * 0.07, stiffness: 120, damping: 14 }
+      })
+    };
     return (
       <div className="min-h-screen bg-[#f1f5f9] pb-20">
         {/* Stats summary */}
@@ -500,13 +514,13 @@ const Applications: React.FC = () => {
         {/* Tabs */}
         <div className="flex w-full px-2 gap-2 mt-2">
           <button
-            className={`flex-1 py-2 rounded-lg font-semibold text-xs ${activeTab === 'jobs' ? 'bg-[#185a9d] text-white shadow' : 'bg-white text-[#185a9d] border border-[#185a9d]'}`}
+            className={`flex-1 py-2 rounded-lg font-semibold text-xs ${activeTab === 'jobs' ? 'bg-gradient-to-r from-[#185a9d] to-[#43cea2] text-white shadow' : 'bg-white text-[#185a9d] border border-[#185a9d]'}`}
             onClick={() => setActiveTab('jobs')}
           >
             Jobs ({applications.length})
           </button>
           <button
-            className={`flex-1 py-2 rounded-lg font-semibold text-xs ${activeTab === 'internships' ? 'bg-[#185a9d] text-white shadow' : 'bg-white text-[#185a9d] border border-[#185a9d]'}`}
+            className={`flex-1 py-2 rounded-lg font-semibold text-xs ${activeTab === 'internships' ? 'bg-gradient-to-r from-[#185a9d] to-[#43cea2] text-white shadow' : 'bg-white text-[#185a9d] border border-[#185a9d]'}`}
             onClick={() => setActiveTab('internships')}
           >
             Internships ({internshipApplications.length})
@@ -536,97 +550,132 @@ const Applications: React.FC = () => {
             <option value="withdrawn">Withdrawn</option>
           </select>
         </div>
-        {/* Applications List */}
-        <div className="flex flex-col gap-3 px-2 mt-2">
-          {activeTab === 'jobs' && (
-            filteredApplications.length === 0 ? (
-              <div className="bg-white rounded-xl p-8 text-center text-gray-400 shadow">No job applications found</div>
-            ) : (
-              filteredApplications.map(application => (
-                <div key={application.id} className="bg-white rounded-xl shadow p-4 flex flex-col gap-2">
-                  <div className="flex items-center gap-3">
-                    <img
-                      className="w-12 h-12 rounded-full object-cover border"
-                      src={application.user?.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTI0IDI4QzMwLjYyNzQgMjggMzYgMjIuNjI3NCAzNiAxNkMzNiA5LjM3MjU4IDMwLjYyNzQgNCAyNCA0QzE3LjM3MjYgNCAxMiA5LjM3MjU4IDEyIDE2QzEyIDIyLjYyNzQgMTcuMzcyNiAyOCAyNCAyOFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMyQzE2LjI2ODkgMzIgMTAgMzguMjY4OSAxMCA0NkgyNEMzMS43MzExIDQ2IDM4IDM5LjczMTEgMzggMzJIMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='}
-                      alt={application.user?.full_name || 'Applicant'}
-                    />
-                    <div className="flex-1">
-                      <div className="font-bold text-gray-900 text-base">{application.user?.full_name || 'N/A'}</div>
-                      <div className="text-xs text-gray-500">{application.job?.title || 'N/A'}</div>
-                      <div className="text-xs text-gray-400">{new Date(application.created_at).toLocaleDateString()}</div>
+        {/* Applications List with Animation */}
+        <AnimatePresence mode="wait">
+          {activeTab === 'jobs' ? (
+            <motion.div
+              key="jobs"
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -40 }}
+              transition={{ duration: 0.3 }}
+              className="flex flex-col gap-3 px-2 mt-2"
+            >
+              {filteredApplications.length === 0 ? (
+                <motion.div className="bg-white rounded-xl p-8 text-center text-gray-400 shadow" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>No job applications found</motion.div>
+              ) : (
+                filteredApplications.map((application, i) => (
+                  <motion.div
+                    key={application.id}
+                    className="bg-white rounded-2xl shadow-lg p-4 flex flex-col gap-2 border-2 border-[#e3f0fa]"
+                    custom={i}
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                    variants={cardVariants}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <img
+                        className="w-12 h-12 rounded-full object-cover border"
+                        src={application.user?.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTI0IDI4QzMwLjYyNzQgMjggMzYgMjIuNjI3NCAzNiAxNkMzNiA5LjM3MjU4IDMwLjYyNzQgNCAyNCA0QzE3LjM3MjYgNCAxMiA5LjM3MjU4IDEyIDE2QzEyIDIyLjYyNzQgMTcuMzcyNiAyOCAyNCAyOFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMyQzE2LjI2ODkgMzIgMTAgMzguMjY4OSAxMCA0NkgyNEMzMS43MzExIDQ2IDM4IDM5LjczMTEgMzggMzJIMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='}
+                        alt={application.user?.full_name || 'Applicant'}
+                      />
+                      <div className="flex-1">
+                        <div className="font-bold text-gray-900 text-base">{application.user?.full_name || 'N/A'}</div>
+                        <div className="text-xs text-gray-500">{application.job?.title || 'N/A'}</div>
+                        <div className="text-xs text-gray-400">{new Date(application.created_at).toLocaleDateString()}</div>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(application.status)}`}>{application.status}</span>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(application.status)}`}>{application.status}</span>
-                  </div>
-                  <div className="flex gap-2 mt-1">
-                    <select
-                      value={application.status}
-                      onChange={e => handleStatusChange(application.id, e.target.value)}
-                      className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
-                    >
-                      <option value="submitted">Submitted</option>
-                      <option value="pending">Pending</option>
-                      <option value="reviewed">Reviewed</option>
-                      <option value="shortlisted">Shortlisted</option>
-                      <option value="rejected">Rejected</option>
-                      <option value="accepted">Accepted</option>
-                      <option value="withdrawn">Withdrawn</option>
-                    </select>
-                    <Link
-                      to={`/employer/job-seeker-profile/${application.user?.id}`}
-                      className="flex-1 py-2 rounded-lg bg-gray-100 text-[#185a9d] text-xs font-semibold text-center shadow"
-                    >
-                      View Profile
-                    </Link>
-                  </div>
-                </div>
-              ))
-            )
-          )}
-          {activeTab === 'internships' && (
-            filteredInternshipApplications.length === 0 ? (
-              <div className="bg-white rounded-xl p-8 text-center text-gray-400 shadow">No internship applications found</div>
-            ) : (
-              filteredInternshipApplications.map(application => (
-                <div key={application.id} className="bg-white rounded-xl shadow p-4 flex flex-col gap-2">
-                  <div className="flex items-center gap-3">
-                    <img
-                      className="w-12 h-12 rounded-full object-cover border"
-                      src={application.user?.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTI0IDI4QzMwLjYyNzQgMjggMzYgMjIuNjI3NCAzNiAxNkMzNiA5LjM3MjU4IDMwLjYyNzQgNCAyNCA0QzE3LjM3MjYgNCAxMiA5LjM3MjU4IDEyIDE2QzEyIDIyLjYyNzQgMTcuMzcyNiAyOCAyNCAyOFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMyQzE2LjI2ODkgMzIgMTAgMzguMjY4OSAxMCA0NkgyNEMzMS43MzExIDQ2IDM4IDM5LjczMTEgMzggMzJIMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='}
-                      alt={application.user?.full_name || 'Applicant'}
-                    />
-                    <div className="flex-1">
-                      <div className="font-bold text-gray-900 text-base">{application.user?.full_name || 'N/A'}</div>
-                      <div className="text-xs text-gray-500">{application.internship?.title || 'N/A'}</div>
-                      <div className="text-xs text-gray-400">{new Date(application.created_at).toLocaleDateString()}</div>
+                    <div className="flex gap-2 mt-1">
+                      <select
+                        value={application.status}
+                        onChange={e => handleStatusChange(application.id, e.target.value)}
+                        className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
+                      >
+                        <option value="submitted">Submitted</option>
+                        <option value="pending">Pending</option>
+                        <option value="reviewed">Reviewed</option>
+                        <option value="shortlisted">Shortlisted</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="withdrawn">Withdrawn</option>
+                      </select>
+                      <Link
+                        to={`/employer/job-seeker-profile/${application.user?.id}`}
+                        className="flex-1 py-2 rounded-lg bg-gray-100 text-[#185a9d] text-xs font-semibold text-center shadow"
+                      >
+                        View Profile
+                      </Link>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(application.status)}`}>{application.status}</span>
-                  </div>
-                  <div className="flex gap-2 mt-1">
-                    <select
-                      value={application.status}
-                      onChange={e => handleInternshipStatusChange(application.id, e.target.value)}
-                      className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
-                    >
-                      <option value="submitted">Submitted</option>
-                      <option value="pending">Pending</option>
-                      <option value="reviewed">Reviewed</option>
-                      <option value="shortlisted">Shortlisted</option>
-                      <option value="rejected">Rejected</option>
-                      <option value="accepted">Accepted</option>
-                      <option value="withdrawn">Withdrawn</option>
-                    </select>
-                    <Link
-                      to={`/employer/job-seeker-profile/${application.user?.id}`}
-                      className="flex-1 py-2 rounded-lg bg-gray-100 text-[#185a9d] text-xs font-semibold text-center shadow"
-                    >
-                      View Profile
-                    </Link>
-                  </div>
-                </div>
-              ))
-            )
+                  </motion.div>
+                ))
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="internships"
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -40 }}
+              transition={{ duration: 0.3 }}
+              className="flex flex-col gap-3 px-2 mt-2"
+            >
+              {filteredInternshipApplications.length === 0 ? (
+                <motion.div className="bg-white rounded-xl p-8 text-center text-gray-400 shadow" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>No internship applications found</motion.div>
+              ) : (
+                filteredInternshipApplications.map((application, i) => (
+                  <motion.div
+                    key={application.id}
+                    className="bg-white rounded-2xl shadow-lg p-4 flex flex-col gap-2 border-2 border-[#e3f0fa]"
+                    custom={i}
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                    variants={cardVariants}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <img
+                        className="w-12 h-12 rounded-full object-cover border"
+                        src={application.user?.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTI0IDI4QzMwLjYyNzQgMjggMzYgMjIuNjI3NCAzNiAxNkMzNiA5LjM3MjU4IDMwLjYyNzQgNCAyNCA0QzE3LjM3MjYgNCAxMiA5LjM3MjU4IDEyIDE2QzEyIDIyLjYyNzQgMTcuMzcyNiAyOCAyNCAyOFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMyQzE2LjI2ODkgMzIgMTAgMzguMjY4OSAxMCA0NkgyNEMzMS43MzExIDQ2IDM4IDM5LjczMTEgMzggMzJIMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='}
+                        alt={application.user?.full_name || 'Applicant'}
+                      />
+                      <div className="flex-1">
+                        <div className="font-bold text-gray-900 text-base">{application.user?.full_name || 'N/A'}</div>
+                        <div className="text-xs text-gray-500">{application.internship?.title || 'N/A'}</div>
+                        <div className="text-xs text-gray-400">{new Date(application.created_at).toLocaleDateString()}</div>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(application.status)}`}>{application.status}</span>
+                    </div>
+                    <div className="flex gap-2 mt-1">
+                      <select
+                        value={application.status}
+                        onChange={e => handleInternshipStatusChange(application.id, e.target.value)}
+                        className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
+                      >
+                        <option value="submitted">Submitted</option>
+                        <option value="pending">Pending</option>
+                        <option value="reviewed">Reviewed</option>
+                        <option value="shortlisted">Shortlisted</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="withdrawn">Withdrawn</option>
+                      </select>
+                      <Link
+                        to={`/employer/job-seeker-profile/${application.user?.id}`}
+                        className="flex-1 py-2 rounded-lg bg-gray-100 text-[#185a9d] text-xs font-semibold text-center shadow"
+                      >
+                        View Profile
+                      </Link>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       </div>
     );
   }

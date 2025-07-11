@@ -1,11 +1,13 @@
 import React, { useContext, useEffect, useState, useRef, useMemo } from 'react';
 import { supabase } from '../../config/supabase';
 import { AuthContext } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import useIsMobile from '../../hooks/useIsMobile';
+import { FiBriefcase } from 'react-icons/fi';
+import { FaGraduationCap } from 'react-icons/fa';
 
 interface SavedVideo {
   id: string;
@@ -22,7 +24,9 @@ interface SavedVideo {
 }
 
 const SavedJobSeekerVideos: React.FC = () => {
-  const { user } = useContext(AuthContext);
+  const { user, profile } = useContext(AuthContext);
+  const location = useLocation();
+  const [tab, setTab] = useState<'saved' | 'posted'>('saved');
   const [videos, setVideos] = useState<SavedVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewingId, setViewingId] = useState<string | null>(null);
@@ -41,10 +45,28 @@ const SavedJobSeekerVideos: React.FC = () => {
   const minSwipeDistance = 50;
   const isMobile = useIsMobile();
 
+  // --- Posted Jobs/Internships State ---
+  const [postedJobs, setPostedJobs] = useState<any[]>([]);
+  const [postedInternships, setPostedInternships] = useState<any[]>([]);
+  const [loadingPosted, setLoadingPosted] = useState(false);
+
   useEffect(() => {
-    fetchSavedVideos();
+    // Check for tab query param on mount
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam === 'posted') setTab('posted');
+    else setTab('saved');
     // eslint-disable-next-line
-  }, [user]);
+  }, []);
+
+  useEffect(() => {
+    if (tab === 'posted') {
+      fetchPostedJobsAndInternships();
+    } else {
+      fetchSavedVideos();
+    }
+    // eslint-disable-next-line
+  }, [tab, user, profile]);
 
   const fetchSavedVideos = async () => {
     if (!user) return;
@@ -86,6 +108,45 @@ const SavedJobSeekerVideos: React.FC = () => {
     console.log('Saved videos data:', mapped); // Debug log
     setVideos(mapped);
     setLoading(false);
+  };
+
+  const fetchPostedJobsAndInternships = async () => {
+    if (!profile) return;
+    setLoadingPosted(true);
+    try {
+      // Fetch company id
+      const userId = profile.auth_id || profile.user_id;
+      const { data: companies } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('auth_id', userId);
+      const companyId = companies && companies.length > 0 ? companies[0].id : null;
+      if (!companyId) {
+        setPostedJobs([]);
+        setPostedInternships([]);
+        setLoadingPosted(false);
+        return;
+      }
+      // Fetch jobs
+      const { data: jobs } = await supabase
+        .from('jobs')
+        .select('id, title, location, job_type, status, created_at')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false });
+      setPostedJobs(jobs || []);
+      // Fetch internships
+      const { data: internships } = await supabase
+        .from('internships')
+        .select('id, title, location, type, status, created_at')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false });
+      setPostedInternships(internships || []);
+    } catch (err) {
+      setPostedJobs([]);
+      setPostedInternships([]);
+    } finally {
+      setLoadingPosted(false);
+    }
   };
 
   // Real-time filtered videos
@@ -595,263 +656,277 @@ const SavedJobSeekerVideos: React.FC = () => {
   }
 
   return (
-    <div
-      className="h-screen bg-[#f1f5f9] relative overflow-hidden flex flex-col"
-      ref={containerRef}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-    >
-      {/* Header */}
-      <div className="w-full flex justify-center pt-6 pb-2 z-20">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center"
+    <div className="min-h-screen bg-[#f1f5f9] flex flex-col">
+      {/* Tab Bar */}
+      <div className="flex w-full bg-white rounded-t-2xl shadow mb-2 sticky top-0 z-10">
+        <button
+          className={`flex-1 py-3 text-center font-semibold text-base rounded-t-2xl transition-all duration-200 ${tab === 'saved' ? 'bg-[#185a9d] text-white shadow' : 'bg-white text-[#185a9d]'}`}
+          onClick={() => setTab('saved')}
         >
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">�� Saved Videos</h1>
-          <p className="text-sm text-gray-600 mb-3">{filteredVideos.length} video{filteredVideos.length !== 1 ? 's' : ''} saved</p>
-          
-          {/* View Mode Toggle */}
-          <div className="flex justify-center mb-2">
-            <div className="flex bg-white rounded-full shadow-md p-1">
-                      <button
-                onClick={() => setViewMode('grid')}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                  viewMode === 'grid'
-                    ? 'bg-gray-900 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
+          Saved
+        </button>
+        <button
+          className={`flex-1 py-3 text-center font-semibold text-base rounded-t-2xl transition-all duration-200 ${tab === 'posted' ? 'bg-[#185a9d] text-white shadow' : 'bg-white text-[#185a9d]'}`}
+          onClick={() => setTab('posted')}
+        >
+          Posted
+        </button>
+      </div>
+      {/* Tab Content */}
+      {tab === 'saved' ? (
+        <div className="flex-1 flex flex-col">
+          {/* Original Saved videos UI below */}
+          <div
+            className="h-screen bg-[#f1f5f9] relative overflow-hidden flex flex-col"
+            ref={containerRef}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
+            {/* Header */}
+            <div className="w-full flex justify-center pt-6 pb-2 z-20">
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center"
               >
-                📋 Grid
-                      </button>
-                      <button
-                onClick={() => setViewMode('reels')}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                  viewMode === 'reels'
-                    ? 'bg-gray-900 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                🎬 Reels
-                      </button>
-                    </div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-1"> Saved Videos</h1>
+                <p className="text-sm text-gray-600 mb-3">{filteredVideos.length} video{filteredVideos.length !== 1 ? 's' : ''} saved</p>
+                
+                {/* View Mode Toggle */}
+                <div className="flex justify-center mb-2">
+                  <div className="flex bg-white rounded-full shadow-md p-1">
+                    <button
+                      onClick={() => setViewMode('grid')}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                        viewMode === 'grid'
+                          ? 'bg-gray-900 text-white shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                    >
+                      📋 Grid
+                    </button>
+                    <button
+                      onClick={() => setViewMode('reels')}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                        viewMode === 'reels'
+                          ? 'bg-gray-900 text-white shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                    >
+                      🎬 Reels
+                    </button>
                   </div>
-        </motion.div>
-      </div>
-
-      {/* Search Bar */}
-      <div className="w-full flex justify-center pb-4 z-20">
-        <motion.div
-          className={`flex items-center bg-[#f4f8fb] rounded-full shadow-lg px-2 py-1 gap-2 transition-all duration-300 border border-[#e3f0fa] ${searchFocused ? 'ring-2 ring-[#43cea2]' : ''}`}
-          style={{ minWidth: 320, maxWidth: 480 }}
-          onMouseEnter={() => setSearchFocused(true)}
-          onMouseLeave={() => setSearchFocused(false)}
-        >
-          <input
-            type="text"
-            placeholder="Role / Designation"
-            value={roleFilter}
-            onChange={e => setRoleFilter(e.target.value)}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-            className={`bg-transparent px-4 py-2 outline-none text-gray-900 text-base transition-all duration-200 w-32 ${searchFocused ? 'w-40' : ''}`}
-            style={{ borderRight: '1px solid #e5e7eb' }}
-          />
-          <input
-            type="text"
-            placeholder="Location"
-            value={locationFilter}
-            onChange={e => setLocationFilter(e.target.value)}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-            className={`bg-transparent px-4 py-2 outline-none text-gray-900 text-base transition-all duration-200 w-32 ${searchFocused ? 'w-40' : ''}`}
-          />
-          <span className="px-2 text-gray-400">
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-          </span>
-        </motion.div>
                 </div>
-
-      {/* Main Video Display */}
-      <div className="flex-1 flex items-center justify-center relative">
-        <motion.div
-          key={currentIndex}
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.97 }}
-          transition={{ duration: 0.3 }}
-          className="relative w-full h-full max-w-md mx-auto"
-        >
-          {/* Video Player */}
-          <div className="relative w-full h-full bg-black rounded-3xl overflow-hidden shadow-2xl border-2 border-gray-900">
-            <video
-              ref={videoRef}
-              src={currentVideo.intro_video_url}
-              poster={currentVideo.video_thumbnail_url}
-              className="w-full h-full object-cover"
-              autoPlay={videoInView}
-              loop
-              muted
-              playsInline
-              onError={(e) => {
-                console.error('Video failed to load:', currentVideo.intro_video_url);
-                const videoElement = e.target as HTMLVideoElement;
-                videoElement.style.display = 'none';
-              }}
-            />
-            {/* Video Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-            
-            {/* User Info */}
-            <div className="absolute bottom-24 left-4 right-4 text-white">
-              <h3 className="text-xl font-bold mb-2">
-                {currentVideo.full_name || currentVideo.username || 'Job Seeker'}
-              </h3>
-              {currentVideo.title && (
-                <p className="text-lg text-gray-200 mb-2">{currentVideo.title}</p>
-              )}
-              <p className="text-sm text-gray-300 mb-1">
-                📍 {currentVideo.desired_location || 'Location not specified'}
-              </p>
-              {currentVideo.desired_roles && currentVideo.desired_roles.length > 0 && (
-                <p className="text-sm text-gray-300">
-                  🎯 {currentVideo.desired_roles.join(', ')}
-                </p>
-              )}
+              </motion.div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="absolute bottom-6 right-6 flex flex-col gap-4 items-end">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleRemoveVideo(currentVideo.id, currentVideo.auth_id)}
-                disabled={removingId === currentVideo.id}
-                className="flex items-center gap-2 px-5 py-2 rounded-full font-semibold shadow-lg transition-all duration-200 text-lg bg-red-500 text-white hover:bg-red-600"
+            {/* Search Bar */}
+            <div className="w-full flex justify-center pb-4 z-20">
+              <motion.div
+                className={`flex items-center bg-[#f4f8fb] rounded-full shadow-lg px-2 py-1 gap-2 transition-all duration-300 border border-[#e3f0fa] ${searchFocused ? 'ring-2 ring-[#43cea2]' : ''}`}
+                style={{ minWidth: 320, maxWidth: 480 }}
+                onMouseEnter={() => setSearchFocused(true)}
+                onMouseLeave={() => setSearchFocused(false)}
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                {removingId === currentVideo.id ? 'Removing...' : 'Remove'}
-              </motion.button>
-              
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleViewProfile(currentVideo.auth_id)}
-                disabled={viewingId === currentVideo.auth_id}
-                className="flex items-center gap-2 px-5 py-2 rounded-full font-semibold shadow-lg transition-all duration-200 text-lg bg-[#185a9d] text-white hover:bg-[#43cea2]"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                {viewingId === currentVideo.auth_id ? 'Processing...' : 'View Full Profile'}
-              </motion.button>
+                <input
+                  type="text"
+                  placeholder="Role / Designation"
+                  value={roleFilter}
+                  onChange={e => setRoleFilter(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setSearchFocused(false)}
+                  className={`bg-transparent px-4 py-2 outline-none text-gray-900 text-base transition-all duration-200 w-32 ${searchFocused ? 'w-40' : ''}`}
+                  style={{ borderRight: '1px solid #e5e7eb' }}
+                />
+                <input
+                  type="text"
+                  placeholder="Location"
+                  value={locationFilter}
+                  onChange={e => setLocationFilter(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setSearchFocused(false)}
+                  className={`bg-transparent px-4 py-2 outline-none text-gray-900 text-base transition-all duration-200 w-32 ${searchFocused ? 'w-40' : ''}`}
+                />
+                <span className="px-2 text-gray-400">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+                </span>
+              </motion.div>
             </div>
 
-            {/* Video Counter */}
-            <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-md rounded-full px-3 py-1 text-white text-sm">
-              {currentIndex + 1} / {filteredVideos.length}
+            {/* Grid Layout */}
+            <div className="max-w-7xl mx-auto px-4 pb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredVideos.map((video, index) => (
+                  <motion.div
+                    key={video.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="bg-[#f4f8fb] rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 border border-[#e3f0fa]"
+                  >
+                    {/* Video Container */}
+                    <div className="relative aspect-video bg-black">
+                    <video
+                      src={video.intro_video_url}
+                      poster={video.video_thumbnail_url}
+                        className="w-full h-full object-cover"
+                      controls
+                      preload="metadata"
+                        onError={(e) => {
+                          console.error('Video failed to load:', video.intro_video_url);
+                          const videoElement = e.target as HTMLVideoElement;
+                          videoElement.style.display = 'none';
+                        }}
+                      />
+                      {/* Saved Badge */}
+                      <div className="absolute top-2 right-2 bg-[#185a9d] text-white rounded-full px-2 py-1 text-xs font-semibold flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                        Saved
+                      </div>
+                    </div>
+
+                    {/* Video Info */}
+                    <div className="p-4">
+                      <h3 className="font-semibold text-gray-900 mb-2">
+                        {video.full_name || video.username || 'Job Seeker'}
+                      </h3>
+                      {video.title && (
+                        <p className="text-sm text-gray-600 mb-2">{video.title}</p>
+                      )}
+                      <p className="text-sm text-gray-500 mb-1">
+                        📍 {video.desired_location || 'Location not specified'}
+                      </p>
+                      {video.desired_roles && video.desired_roles.length > 0 && (
+                        <p className="text-sm text-gray-400 mb-3">
+                          🎯 {video.desired_roles.join(', ')}
+                        </p>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-2">
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleViewProfile(video.auth_id)}
+                          disabled={viewingId === video.auth_id}
+                          className="flex-1 px-3 py-2 bg-[#185a9d] text-white rounded-lg text-sm font-medium hover:bg-[#43cea2] transition-colors disabled:opacity-50"
+                        >
+                          {viewingId === video.auth_id ? 'Processing...' : 'View Profile'}
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleRemoveVideo(video.id, video.auth_id)}
+                          disabled={removingId === video.id}
+                          className="px-3 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+                        >
+                          {removingId === video.id ? '...' : '🗑️'}
+                        </motion.button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
 
-            {/* Saved Badge */}
-            <div className="absolute top-4 right-4 bg-[#185a9d] text-white rounded-full px-3 py-1 text-sm font-semibold flex items-center gap-1">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-              </svg>
-              Saved
-            </div>
+            {/* Confirmation Dialog */}
+            <AnimatePresence>
+              {showConfirm && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+                >
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    className="bg-white rounded-2xl p-8 max-w-sm w-full text-center"
+                  >
+                    <h2 className="text-xl font-bold mb-4 text-gray-900">Use 1 credit to view full profile?</h2>
+                    <p className="text-gray-600 mb-6">This action will deduct 1 credit from your balance.</p>
+                    <div className="flex gap-4 justify-center">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => confirmViewProfile(showConfirm)}
+                        className="px-6 py-2 bg-[#185a9d] text-white rounded-full font-semibold hover:bg-[#43cea2] transition-colors"
+                      >
+                        Continue
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setShowConfirm(null)}
+                        className="px-6 py-2 bg-gray-200 text-gray-700 rounded-full font-semibold hover:bg-gray-300 transition-colors"
+                      >
+                        Cancel
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        </motion.div>
-      </div>
-
-      {/* Progress Indicator */}
-      {filteredVideos.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
-          {filteredVideos.map((_, index) => (
-            <motion.button
-              key={index}
-              whileHover={{ scale: 1.2 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setCurrentIndex(index)}
-              className={`w-3 h-3 rounded-full transition-all ${
-                index === currentIndex 
-                  ? 'bg-[#185a9d] scale-125' 
-                  : 'bg-[#e3f0fa] hover:bg-[#f4f8fb]'
-              }`}
-            />
-          ))}
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto p-2">
+          {loadingPosted ? (
+            <div className="flex justify-center items-center h-40 text-[#185a9d] font-semibold">Loading...</div>
+          ) : (
+            <>
+              <div className="mb-4">
+                <h2 className="text-xl font-bold text-[#185a9d] mb-2">Posted Jobs</h2>
+                {postedJobs.length === 0 ? (
+                  <div className="text-gray-400 text-center py-4">No jobs posted yet.</div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {postedJobs.map(job => (
+                      <div key={job.id} className="bg-white rounded-xl shadow p-4 flex flex-col gap-2 border border-[#e3f0fa]">
+                        <div className="flex items-center gap-3">
+                          <FiBriefcase className="w-7 h-7 text-[#185a9d]" />
+                          <div className="flex-1">
+                            <div className="font-bold text-gray-900 text-base">{job.title}</div>
+                            <div className="text-xs text-gray-500">{typeof job.location === 'string' ? job.location : (job.location?.city || '')}</div>
+                            <div className="text-xs text-gray-400">{new Date(job.created_at).toLocaleDateString()}</div>
+                          </div>
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${job.status === 'active' ? 'bg-green-100 text-green-800' : job.status === 'paused' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>{job.status}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-[#185a9d] mb-2">Posted Internships</h2>
+                {postedInternships.length === 0 ? (
+                  <div className="text-gray-400 text-center py-4">No internships posted yet.</div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {postedInternships.map(internship => (
+                      <div key={internship.id} className="bg-white rounded-xl shadow p-4 flex flex-col gap-2 border border-[#e3f0fa]">
+                        <div className="flex items-center gap-3">
+                          <FaGraduationCap className="w-7 h-7 text-[#185a9d]" />
+                          <div className="flex-1">
+                            <div className="font-bold text-gray-900 text-base">{internship.title}</div>
+                            <div className="text-xs text-gray-500">{typeof internship.location === 'string' ? internship.location : (internship.location?.city || '')}</div>
+                            <div className="text-xs text-gray-400">{new Date(internship.created_at).toLocaleDateString()}</div>
+                          </div>
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${internship.status === 'active' ? 'bg-green-100 text-green-800' : internship.status === 'paused' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>{internship.status}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
-
-      {/* Navigation Arrows (Desktop) */}
-      <div className="hidden md:block">
-        {currentIndex > 0 && (
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setCurrentIndex(i => i - 1)}
-            className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-all"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-            </svg>
-          </motion.button>
-        )}
-        {currentIndex < filteredVideos.length - 1 && (
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setCurrentIndex(i => i + 1)}
-            className="absolute right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-all"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </motion.button>
-        )}
-      </div>
-
-      {/* Confirmation Dialog */}
-      <AnimatePresence>
-        {showConfirm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl p-8 max-w-sm w-full text-center"
-            >
-              <h2 className="text-xl font-bold mb-4 text-gray-900">Use 1 credit to view full profile?</h2>
-              <p className="text-gray-600 mb-6">This action will deduct 1 credit from your balance.</p>
-              <div className="flex gap-4 justify-center">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => confirmViewProfile(showConfirm)}
-                  className="px-6 py-2 bg-[#185a9d] text-white rounded-full font-semibold hover:bg-[#43cea2] transition-colors"
-                >
-                  Continue
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowConfirm(null)}
-                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-full font-semibold hover:bg-gray-300 transition-colors"
-                >
-                  Cancel
-                </motion.button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

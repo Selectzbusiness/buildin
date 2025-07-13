@@ -7,8 +7,10 @@
     font-family: Inter, system-ui, sans-serif;
   }
 
-  body {
-    @apply bg-gray-50;
+  body, #root {
+    padding-top: env(safe-area-inset-top);
+    padding-top: constant(safe-area-inset-top, 24px);
+    background: #fff;
   }
 }
 
@@ -324,5 +326,9 @@
     100% {
       background-position: 200% 0;
     }
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 32px);
   }
 } 

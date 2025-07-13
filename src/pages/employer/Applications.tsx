@@ -22,6 +22,7 @@ import {
 import Modal from '../../components/Modal';
 import useIsMobile from '../../hooks/useIsMobile';
 import { motion, AnimatePresence } from 'framer-motion';
+import VideoVerifiedTag from '../../components/VideoVerifiedTag';
 
 // Define types for data structures
 interface Applicant {
@@ -29,6 +30,7 @@ interface Applicant {
   full_name: string;
   avatar_url?: string;
   auth_id?: string;
+  intro_video_url?: string;
 }
 
 interface Job {
@@ -237,44 +239,8 @@ const Applications: React.FC = () => {
       console.log('Fetched application data:', appData);
 
       if (appData && appData.id && appData.job_seeker_id) {
-        // Test notification creation first
-        const testResult = await testNotificationCreation(appData.job_seeker_id);
-        console.log('Test notification result:', testResult);
-
-        // Validate internship_application_id is a valid UUID
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(appData.id)) {
-          console.error('Invalid internship_application_id (not a UUID):', appData.id);
-          throw new Error('Invalid internship_application_id (not a UUID)');
-        }
-        // Construct notification object with only the required keys
-        const notification = {
-          user_id: appData.job_seeker_id,
-          internship_application_id: appData.id,
-          title: `Internship Application Status Updated`,
-          message: `Your internship application status has been updated to "${newStatus}"`,
-          type: 'application',
-          read: false,
-          channel: 'in-app'
-        };
-        // Debug: log the notification object and its keys
-        console.log('Notification payload (internship):', notification);
-        // Insert notification directly
-        const { data: notifData, error: notifError } = await supabase
-          .from('notifications')
-          .insert([notification])
-          .select();
-        if (notifError) {
-          console.error('Error creating internship notification:', notifError);
-          console.error('Error details:', {
-            code: notifError.code,
-            message: notifError.message,
-            details: notifError.details,
-            hint: notifError.hint
-          });
-        } else {
-          console.log('Internship notification created successfully:', notifData);
-        }
+        // Notification is now handled by the database trigger, so do not insert from frontend
+        // Just update UI state
       } else {
         console.error('Internship application not found or missing job_seeker_id for notification.');
         console.error('App data:', appData);
@@ -576,31 +542,37 @@ const Applications: React.FC = () => {
                     whileTap={{ scale: 0.97 }}
                   >
                     <div className="flex items-center gap-3">
-                      <img
-                        className="w-12 h-12 rounded-full object-cover border"
-                        src={application.user?.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTI0IDI4QzMwLjYyNzQgMjggMzYgMjIuNjI3NCAzNiAxNkMzNiA5LjM3MjU4IDMwLjYyNzQgNCAyNCA0QzE3LjM3MjYgNCAxMiA5LjM3MjU4IDEyIDE2QzEyIDIyLjYyNzQgMTcuMzcyNiAyOCAyNCAyOFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMyQzE2LjI2ODkgMzIgMTAgMzguMjY4OSAxMCA0NkgyNEMzMS43MzExIDQ2IDM4IDM5LjczMTEgMzggMzJIMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='}
-                        alt={application.user?.full_name || 'Applicant'}
-                      />
+                      <div className="relative">
+                        <img
+                          className="w-12 h-12 rounded-full object-cover border"
+                          src={application.user?.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTI0IDI4QzMwLjYyNzQgMjggMzYgMjIuNjI3NCAzNiAxNkMzNiA5LjM3MjU4IDMwLjYyNzQgNCAyNCA0QzE3LjM3MjYgNCAxMiA5LjM3MjU4IDEyIDE2QzEyIDIyLjYyNzQgMTcuMzcyNiAyOCAyNCAyOFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMyQzE2LjI2ODkgMzIgMTAgMzguMjY4OSAxMCA0NkgyNEMzMS43MzExIDQ2IDM4IDM5LjczMTEgMzggMzJIMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='}
+                          alt={application.user?.full_name || 'Applicant'}
+                        />
+                      </div>
                       <div className="flex-1">
-                        <div className="font-bold text-gray-900 text-base">{application.user?.full_name || 'N/A'}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-bold text-gray-900 text-base">{application.user?.full_name || 'N/A'}</div>
+                        </div>
                         <div className="text-xs text-gray-500">{application.job?.title || 'N/A'}</div>
                         <div className="text-xs text-gray-400">{new Date(application.created_at).toLocaleDateString()}</div>
                       </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(application.status)}`}>{application.status}</span>
                     </div>
+                    {!!application.user?.intro_video_url && (
+                      <div className="mb-1 flex">
+                        <VideoVerifiedTag className="text-xs px-2 py-0.5 h-6" iconSize={16} />
+                      </div>
+                    )}
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(application.status)}`}>{application.status}</span>
                     <div className="flex gap-2 mt-1">
                       <select
                         value={application.status}
                         onChange={e => handleStatusChange(application.id, e.target.value)}
                         className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
                       >
-                        <option value="submitted">Submitted</option>
                         <option value="pending">Pending</option>
                         <option value="reviewed">Reviewed</option>
                         <option value="shortlisted">Shortlisted</option>
                         <option value="rejected">Rejected</option>
-                        <option value="accepted">Accepted</option>
-                        <option value="withdrawn">Withdrawn</option>
                       </select>
                       <Link
                         to={`/employer/job-seeker-profile/${application.user?.id}`}
@@ -637,31 +609,37 @@ const Applications: React.FC = () => {
                     whileTap={{ scale: 0.97 }}
                   >
                     <div className="flex items-center gap-3">
-                      <img
-                        className="w-12 h-12 rounded-full object-cover border"
-                        src={application.user?.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTI0IDI4QzMwLjYyNzQgMjggMzYgMjIuNjI3NCAzNiAxNkMzNiA5LjM3MjU4IDMwLjYyNzQgNCAyNCA0QzE3LjM3MjYgNCAxMiA5LjM3MjU4IDEyIDE2QzEyIDIyLjYyNzQgMTcuMzcyNiAyOCAyNCAyOFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMyQzE2LjI2ODkgMzIgMTAgMzguMjY4OSAxMCA0NkgyNEMzMS43MzExIDQ2IDM4IDM5LjczMTEgMzggMzJIMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='}
-                        alt={application.user?.full_name || 'Applicant'}
-                      />
+                      <div className="relative">
+                        <img
+                          className="w-12 h-12 rounded-full object-cover border"
+                          src={application.user?.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTI0IDI4QzMwLjYyNzQgMjggMzYgMjIuNjI3NCAzNiAxNkMzNiA5LjM3MjU4IDMwLjYyNzQgNCAyNCA0QzE3LjM3MjYgNCAxMiA5LjM3MjU4IDEyIDE2QzEyIDIyLjYyNzQgMTcuMzcyNiAyOCAyNCAyOFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMyQzE2LjI2ODkgMzIgMTAgMzguMjY4OSAxMCA0NkgyNEMzMS43MzExIDQ2IDM4IDM5LjczMTEgMzggMzJIMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='}
+                          alt={application.user?.full_name || 'Applicant'}
+                        />
+                      </div>
                       <div className="flex-1">
-                        <div className="font-bold text-gray-900 text-base">{application.user?.full_name || 'N/A'}</div>
-                        <div className="text-xs text-gray-500">{application.internship?.title || 'N/A'}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-bold text-gray-900 text-base">{application.user?.full_name || 'N/A'}</div>
+                        </div>
+                        <p className="text-gray-600">{application.internship?.title || 'N/A'}</p>
                         <div className="text-xs text-gray-400">{new Date(application.created_at).toLocaleDateString()}</div>
                       </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(application.status)}`}>{application.status}</span>
                     </div>
+                    {!!application.user?.intro_video_url && (
+                      <div className="mb-1 flex">
+                        <VideoVerifiedTag className="text-xs px-2 py-0.5 h-6" iconSize={16} />
+                      </div>
+                    )}
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(application.status)}`}>{application.status}</span>
                     <div className="flex gap-2 mt-1">
                       <select
                         value={application.status}
                         onChange={e => handleInternshipStatusChange(application.id, e.target.value)}
                         className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
                       >
-                        <option value="submitted">Submitted</option>
                         <option value="pending">Pending</option>
                         <option value="reviewed">Reviewed</option>
                         <option value="shortlisted">Shortlisted</option>
                         <option value="rejected">Rejected</option>
-                        <option value="accepted">Accepted</option>
-                        <option value="withdrawn">Withdrawn</option>
                       </select>
                       <Link
                         to={`/employer/job-seeker-profile/${application.user?.id}`}
@@ -844,10 +822,11 @@ const Applications: React.FC = () => {
                             src={application.user?.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTI0IDI4QzMwLjYyNzQgMjggMzYgMjIuNjI3NCAzNiAxNkMzNiA5LjM3MjU4IDMwLjYyNzQgNCAyNCA0QzE3LjM3MjYgNCAxMiA5LjM3MjU4IDEyIDE2QzEyIDIyLjYyNzQgMTcuMzcyNiAyOCAyNCAyOFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMyQzE2LjI2ODkgMzIgMTAgMzguMjY4OSAxMCA0NkgyNEMzMS43MzExIDQ2IDM4IDM5LjczMTEgMzggMzJIMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='} 
                             alt={application.user?.full_name || 'Applicant'} 
                           />
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
-                            </div>
+                        </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900">{application.user?.full_name || 'N/A'}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-semibold text-gray-900">{application.user?.full_name || 'N/A'}</h3>
+                          </div>
                           <p className="text-gray-600">{application.job?.title || 'N/A'}</p>
                           <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
                             <span className="flex items-center space-x-1">
@@ -857,6 +836,11 @@ const Applications: React.FC = () => {
                           </div>
                         </div>
                       </div>
+                      {!!application.user?.intro_video_url && (
+                        <div className="mb-1 flex">
+                          <VideoVerifiedTag className="text-xs px-2 py-0.5 h-6" iconSize={16} />
+                        </div>
+                      )}
                       <div className="flex items-center space-x-4">
                         <span className={`px-3 py-1 inline-flex items-center space-x-1 text-xs font-semibold rounded-full ${getStatusColor(application.status)}`}>
                           {getStatusIcon(application.status)}
@@ -864,16 +848,13 @@ const Applications: React.FC = () => {
                         </span>
                         <select
                           value={application.status}
-                          onChange={(e) => handleStatusChange(application.id, e.target.value)}
+                          onChange={e => handleStatusChange(application.id, e.target.value)}
                           className="rounded-lg border border-gray-200 px-3 py-1 focus:ring-2 focus:ring-[#185a9d] focus:border-transparent text-sm"
                         >
-                          <option value="submitted">Submitted</option>
                           <option value="pending">Pending</option>
                           <option value="reviewed">Reviewed</option>
                           <option value="shortlisted">Shortlisted</option>
                           <option value="rejected">Rejected</option>
-                          <option value="accepted">Accepted</option>
-                          <option value="withdrawn">Withdrawn</option>
                         </select>
                         <div className="flex items-center space-x-2">
                           <Link
@@ -913,10 +894,11 @@ const Applications: React.FC = () => {
                             src={application.user?.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTI0IDI4QzMwLjYyNzQgMjggMzYgMjIuNjI3NCAzNiAxNkMzNiA5LjM3MjU4IDMwLjYyNzQgNCAyNCA0QzE3LjM3MjYgNCAxMiA5LjM3MjU4IDEyIDE2QzEyIDIyLjYyNzQgMTcuMzcyNiAyOCAyNCAyOFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTI0IDMyQzE2LjI2ODkgMzIgMTAgMzguMjY4OSAxMCA0NkgyNEMzMS43MzExIDQ2IDM4IDM5LjczMTEgMzggMzJIMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='} 
                             alt={application.user?.full_name || 'Applicant'} 
                           />
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
-                            </div>
+                        </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900">{application.user?.full_name || 'N/A'}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-semibold text-gray-900">{application.user?.full_name || 'N/A'}</h3>
+                          </div>
                           <p className="text-gray-600">{application.internship?.title || 'N/A'}</p>
                           <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
                             <span className="flex items-center space-x-1">
@@ -926,6 +908,11 @@ const Applications: React.FC = () => {
                           </div>
                         </div>
                       </div>
+                      {!!application.user?.intro_video_url && (
+                        <div className="mb-1 flex">
+                          <VideoVerifiedTag className="text-xs px-2 py-0.5 h-6" iconSize={16} />
+                        </div>
+                      )}
                       <div className="flex items-center space-x-4">
                         <span className={`px-3 py-1 inline-flex items-center space-x-1 text-xs font-semibold rounded-full ${getStatusColor(application.status)}`}>
                           {getStatusIcon(application.status)}
@@ -933,16 +920,13 @@ const Applications: React.FC = () => {
                         </span>
                         <select
                           value={application.status}
-                          onChange={(e) => handleInternshipStatusChange(application.id, e.target.value)}
+                          onChange={e => handleInternshipStatusChange(application.id, e.target.value)}
                           className="rounded-lg border border-gray-200 px-3 py-1 focus:ring-2 focus:ring-[#185a9d] focus:border-transparent text-sm"
                         >
-                          <option value="submitted">Submitted</option>
                           <option value="pending">Pending</option>
                           <option value="reviewed">Reviewed</option>
                           <option value="shortlisted">Shortlisted</option>
                           <option value="rejected">Rejected</option>
-                          <option value="accepted">Accepted</option>
-                          <option value="withdrawn">Withdrawn</option>
                         </select>
                         <div className="flex items-center space-x-2">
                           <Link

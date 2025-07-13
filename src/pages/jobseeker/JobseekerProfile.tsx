@@ -3,6 +3,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { supabase } from '../../config/supabase';
 import { FiEdit2, FiSave, FiX, FiPlus, FiTrash2, FiLinkedin, FiGithub, FiGlobe, FiPhone, FiMapPin, FiMail, FiCalendar, FiAward, FiBookOpen, FiDownload, FiUpload, FiEye, FiEyeOff, FiBriefcase } from 'react-icons/fi';
 import useIsMobile from '../../hooks/useIsMobile';
+import VideoVerifiedTag from '../../components/VideoVerifiedTag';
 
 interface SocialLink { platform: string; url: string; }
 
@@ -692,69 +693,76 @@ const JobseekerProfile: React.FC = () => {
           {/* Redesigned Mobile Profile Header */}
           <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-lg p-4 mt-4 mb-8">
             <div className="flex flex-col items-center">
-              <div className="relative mb-3">
-                <img
-                  src={avatarUrl || '/default-avatar.png'}
-                  alt="Profile"
-                  className="w-28 h-28 rounded-full object-cover border-4 border-[#185a9d] shadow-lg"
-                  onClick={isEditing ? () => fileInputRef.current?.click() : undefined}
-                  style={{ cursor: isEditing ? 'pointer' : 'default', opacity: isEditing ? 0.8 : 1 }}
-                />
-                {isEditing && (
-                  <button
-                    className="absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    type="button"
-                  >
-                    {uploading ? (
-                      <span className="w-4 h-4 text-gray-600 animate-spin border-b-2 border-[#185a9d] rounded-full inline-block"></span>
-                    ) : (
-                      <FiUpload className="w-4 h-4 text-[#185a9d]" />
-                    )}
-                  </button>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-              </div>
-              <h1 className="text-2xl font-extrabold text-black text-center mb-1">{formState.full_name || 'Your Name'}</h1>
-              <p className="text-base font-medium text-gray-700 text-center mb-2">{formState.title || 'Professional Title'}</p>
-              <div className="flex justify-center gap-4 mb-2">
-                {formState.location && (
-                  <span className="flex items-center text-gray-700 text-sm"><FiMapPin className="w-4 h-4 mr-1 text-[#185a9d]" />{formState.location}</span>
-                )}
-                {formState.phone && (
-                  <span className="flex items-center text-gray-700 text-sm"><FiPhone className="w-4 h-4 mr-1 text-orange-500" />{formState.phone}</span>
-                )}
-                {user?.email && (
-                  <span className="flex items-center text-gray-700 text-sm"><FiMail className="w-4 h-4 mr-1 text-indigo-500" />{user.email}</span>
-                )}
-              </div>
-              {formState.social_links && formState.social_links.length > 0 && (
-                <div className="flex justify-center gap-3 mt-2">
-                  {formState.social_links.map((link, idx) => {
-                    let Icon = FiGlobe;
-                    if (link.platform.toLowerCase().includes('linkedin')) Icon = FiLinkedin;
-                    else if (link.platform.toLowerCase().includes('github')) Icon = FiGithub;
-                    return (
-                      <a
-                        key={idx}
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 rounded-full bg-[#e3f0fa] hover:bg-[#d0e4f7] transition"
-                      >
-                        <Icon className="w-5 h-5" style={{ color: '#185a9d' }} />
-                      </a>
-                    );
-                  })}
+              <div className="relative mb-3 flex flex-col items-center">
+                <div className="relative flex items-center justify-center">
+                  <img
+                    src={avatarUrl || '/default-avatar.png'}
+                    alt="Profile"
+                    className="w-28 h-28 rounded-full object-cover border-4 border-[#185a9d] shadow-lg"
+                    onClick={isEditing ? () => fileInputRef.current?.click() : undefined}
+                    style={{ cursor: isEditing ? 'pointer' : 'default', opacity: isEditing ? 0.8 : 1 }}
+                  />
+                  {isEditing && (
+                    <button
+                      className="absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50 transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      type="button"
+                    >
+                      {uploading ? (
+                        <span className="w-4 h-4 text-gray-600 animate-spin border-b-2 border-[#185a9d] rounded-full inline-block"></span>
+                      ) : (
+                        <FiUpload className="w-4 h-4 text-[#185a9d]" />
+                      )}
+                    </button>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
                 </div>
-              )}
+                <h1 className="text-2xl font-extrabold text-black text-center mb-1">{formState.full_name || 'Your Name'}</h1>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <p className="text-base font-medium text-gray-700">{formState.title || 'Professional Title'}</p>
+                  {profile?.intro_video_url && (
+                    <VideoVerifiedTag className="ml-2 px-4 py-1.5 text-base" iconSize={22} />
+                  )}
+                </div>
+                <div className="flex justify-center gap-4 mb-2">
+                  {formState.location && (
+                    <span className="flex items-center text-gray-700 text-sm"><FiMapPin className="w-4 h-4 mr-1 text-[#185a9d]" />{formState.location}</span>
+                  )}
+                  {formState.phone && (
+                    <span className="flex items-center text-gray-700 text-sm"><FiPhone className="w-4 h-4 mr-1 text-orange-500" />{formState.phone}</span>
+                  )}
+                  {user?.email && (
+                    <span className="flex items-center text-gray-700 text-sm"><FiMail className="w-4 h-4 mr-1 text-indigo-500" />{user.email}</span>
+                  )}
+                </div>
+                {formState.social_links && formState.social_links.length > 0 && (
+                  <div className="flex justify-center gap-3 mt-2">
+                    {formState.social_links.map((link, idx) => {
+                      let Icon = FiGlobe;
+                      if (link.platform.toLowerCase().includes('linkedin')) Icon = FiLinkedin;
+                      else if (link.platform.toLowerCase().includes('github')) Icon = FiGithub;
+                      return (
+                        <a
+                          key={idx}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 rounded-full bg-[#e3f0fa] hover:bg-[#d0e4f7] transition"
+                        >
+                          <Icon className="w-5 h-5" style={{ color: '#185a9d' }} />
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
             {/* Success/Error Messages */}
@@ -1401,6 +1409,12 @@ const JobseekerProfile: React.FC = () => {
                         className="hidden"
                         onChange={handleFileChange}
                       />
+                      {/* Video Verified Badge */}
+                      {!!profile?.intro_video_url && (
+                        <div className="absolute -bottom-2 -right-2">
+                          <VideoVerifiedTag />
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 text-white">
                       <h1 className="text-3xl font-bold mb-2">{formState.full_name || 'Your Name'}</h1>

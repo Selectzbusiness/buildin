@@ -80,11 +80,11 @@ const MainLayout: React.FC = () => {
   if (isMobile) return <MainLayoutMobile />;
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] flex flex-col">
+    <div className="min-h-screen bg-[#f1f5f9] flex flex-col safe-area-top">
       {/* Header with logo for desktop only */}
       {/* Removed duplicate logo/text block here */}
       {/* Navigation - Hidden on mobile */}
-      <nav className="bg-white shadow-lg fixed w-full z-20 backdrop-blur-md rounded-b-2xl border-b border-[#e3f0fa] hidden md:block">
+      <nav className="bg-white shadow-lg fixed w-full z-20 backdrop-blur-md rounded-b-2xl border-b border-[#e3f0fa] hidden md:block" style={{ top: 0, paddingTop: 'env(safe-area-inset-top, 32px)' }}>
         <div className="w-full flex justify-center">
           <div className="max-w-7xl w-full px-4 flex justify-between h-16 items-center">
             <div className="flex items-center">

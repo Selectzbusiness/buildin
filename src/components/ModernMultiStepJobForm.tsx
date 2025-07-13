@@ -1348,7 +1348,7 @@ const ModernMultiStepJobForm: React.FC = () => {
     
     try {
       if (!user?.id) {
-        toast.error('Please sign in to post a job');
+        toast.error('Please login to post a job');
         return;
       }
 

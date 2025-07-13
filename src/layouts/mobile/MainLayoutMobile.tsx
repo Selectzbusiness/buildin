@@ -6,6 +6,9 @@ import NotificationCenter from '../../components/NotificationCenter';
 import { FiUser, FiSettings, FiHeart, FiBriefcase, FiLogOut, FiArrowRight, FiHome, FiUpload, FiBell } from 'react-icons/fi';
 import { supabase } from '../../config/supabase';
 import toast from 'react-hot-toast';
+import { Capacitor } from '@capacitor/core';
+import { useEffect } from 'react';
+import VideoVerifiedTag from '../../components/VideoVerifiedTag';
 
 const MainLayoutMobile: React.FC = () => {
   const { profile } = useContext(AuthContext) as any;
@@ -14,19 +17,41 @@ const MainLayoutMobile: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isAndroidApp, setIsAndroidApp] = useState(false);
 
+  useEffect(() => {
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+      setIsAndroidApp(true);
+    }
+  }, []);
+
+  // Real-time unread count for bell icon (independent of NotificationCenter)
   React.useEffect(() => {
+    if (!profile?.auth_id) return;
+    let subscription: any;
+    let mounted = true;
+
     async function fetchUnread() {
-      if (!profile?.auth_id) return;
       const { data, error } = await supabase
         .from('notifications')
         .select('id, read')
         .eq('user_id', profile.auth_id)
         .eq('read', false);
-      if (!error && data) setUnreadCount(data.length);
+      if (!error && data && mounted) setUnreadCount(data.length);
     }
+
     fetchUnread();
-    // Optionally, set up polling or real-time updates here
+    subscription = supabase
+      .channel('notifications-bell-main')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${profile.auth_id}` }, (payload: any) => {
+        fetchUnread();
+      })
+      .subscribe();
+
+    return () => {
+      mounted = false;
+      if (subscription) subscription.unsubscribe();
+    };
   }, [profile?.auth_id]);
 
   // Updated bottom nav config
@@ -68,9 +93,11 @@ const MainLayoutMobile: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] flex flex-col">
+    <div className="min-h-screen bg-[#f1f5f9] flex flex-col safe-area-top" style={{ paddingTop: 'env(safe-area-inset-top, 32px)' }}>
       {/* Header with logo and login/signup button for mobile */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+      <div
+        className="flex items-center justify-between px-4 pt-4 pb-2"
+      >
         <div className="flex items-center">
           <img
             src="/selectz.logo.png"
@@ -80,14 +107,19 @@ const MainLayoutMobile: React.FC = () => {
           />
           <span className="text-lg font-bold text-[#185a9d] tracking-tight">Selectz</span>
         </div>
-        {!profile && (
-          <button
-            onClick={() => navigate('/login')}
-            className="px-4 py-2 bg-gradient-to-r from-[#185a9d] to-[#43cea2] text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-          >
-            Login
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {profile && !!profile.intro_video_url && (
+            <VideoVerifiedTag />
+          )}
+          {!profile && (
+            <button
+              onClick={() => navigate('/login')}
+              className="px-4 py-2 bg-gradient-to-r from-[#185a9d] to-[#43cea2] text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            >
+              Login
+            </button>
+          )}
+        </div>
       </div>
       {/* Main Content - Card style */}
       <main className="flex-1 pt-2 pb-20 px-2">
@@ -118,7 +150,10 @@ const MainLayoutMobile: React.FC = () => {
             <button className="text-2xl text-gray-400" onClick={() => setShowProfileMenu(false)} aria-label="Close menu">&times;</button>
           </div>
           <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
-            <div className="font-semibold text-lg text-black mb-4">{profile?.full_name || 'Profile'}</div>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="font-semibold text-lg text-black">{profile?.full_name || 'Profile'}</div>
+              {profile?.intro_video_url && <VideoVerifiedTag />}
+            </div>
             <Link to="/profile" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition shadow-sm">
               <FiUser className="w-6 h-6 text-emerald-500" />
               <span className="flex-1 text-base font-semibold text-black">Profile</span>

@@ -4,12 +4,12 @@ import { AuthContext } from '../contexts/AuthContext';
 import { supabase } from '../config/supabase';
 import AdvancedSearch from '../components/AdvancedSearch';
 import NotificationCenter from '../components/NotificationCenter';
-import MessagingSystem from '../components/MessagingSystem';
 import JobCardNew from '../components/JobCardNew';
 import { InternshipCard } from '../components/InternshipCard';
 import useIsMobile from '../hooks/useIsMobile';
 import { FiFilter, FiSearch, FiMapPin, FiBriefcase, FiUsers } from 'react-icons/fi';
 import { useJobs } from '../contexts/JobsContext';
+import VideoVerifiedTag from '../components/VideoVerifiedTag';
 
 interface Location {
   city: string;

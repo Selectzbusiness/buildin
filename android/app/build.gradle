@@ -16,6 +16,10 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
     buildTypes {
         release {
             minifyEnabled false
@@ -51,4 +55,12 @@ try {
     }
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
+
+android.applicationVariants.all { variant ->
+    if (variant.buildType.name == 'debug') {
+        variant.outputs.all { output ->
+            outputFileName = "selectz.apk"
+        }
+    }
 }

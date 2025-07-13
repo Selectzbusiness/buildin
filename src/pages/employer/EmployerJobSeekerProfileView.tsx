@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../config/supabase';
 import { AuthContext } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import VideoVerifiedTag from '../../components/VideoVerifiedTag';
 
 interface Profile {
   id: string;
@@ -169,7 +170,14 @@ const EmployerJobSeekerProfileView: React.FC = () => {
               )}
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{profile.full_name}</h1>
+              <div className="flex items-center gap-2 mb-2">
+                <h1 className="text-3xl font-bold text-gray-900">{profile.full_name}</h1>
+                <VideoVerifiedTag 
+                  hasVideo={!!profile.intro_video_url} 
+                  size="md" 
+                  showText={true}
+                />
+              </div>
               <p className="text-xl text-emerald-600 font-semibold mb-1">{profile.title}</p>
               <p className="text-gray-500 flex items-center gap-2">
                 📍 {profile.location || 'Location not specified'}

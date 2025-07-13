@@ -73,13 +73,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     // Wait for Supabase to restore the session from localStorage
     const restoreSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('Restored session:', session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error restoring session:', error);
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setProfile(null);
+        }
+        setLoading(false);
+      } catch (err) {
+        console.error('UNHANDLED ERROR in restoreSession:', err);
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     // Only run after the page is loaded (to ensure localStorage is available)
@@ -93,6 +108,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Listen for auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (event === 'SIGNED_OUT' || !session?.user) {
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
         setUser(session?.user ?? null);
         if (session?.user) {
           await fetchProfile(session.user.id);
@@ -100,11 +121,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setProfile(null);
         }
         setLoading(false);
-
-        // Handle magic link login - removed window.location.reload() to prevent conflicts
-        if (event === 'SIGNED_IN') {
-          console.log('User signed in via magic link or other method');
-        }
       }
     );
 

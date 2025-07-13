@@ -3,7 +3,34 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.selectz.app',
   appName: 'Selectz',
-  webDir: 'build'
+  webDir: 'build',
+  server: {
+    androidScheme: 'https',
+    iosScheme: 'https',
+    allowNavigation: [
+      'https://*.supabase.co',
+      'https://*.netlify.app'
+    ]
+  },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 2000,
+      backgroundColor: '#ffffff',
+      showSpinner: true,
+      spinnerColor: '#3b82f6',
+      androidStatusBarTranslucent: true
+    },
+    StatusBar: {
+      style: 'dark',
+      backgroundColor: '#ffffff'
+    }
+  },
+  ios: {
+    scheme: 'Selectz'
+  },
+  android: {
+    scheme: 'selectz'
+  }
 };
 
 export default config;

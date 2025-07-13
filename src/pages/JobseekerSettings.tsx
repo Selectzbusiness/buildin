@@ -21,7 +21,7 @@ import {
 import toast from 'react-hot-toast';
 import useIsMobile from '../hooks/useIsMobile';
 
-type SettingsTab = 'account' | 'security' | 'notifications' | 'privacy' | 'preferences' | 'data';
+type SettingsTab = 'account' | 'security';
 
 const JobseekerSettings: React.FC = () => {
   const { user, profile } = useContext(AuthContext);
@@ -69,42 +69,11 @@ const JobseekerSettings: React.FC = () => {
     confirmPassword: '',
   });
 
-  // Notification Settings
-  const [notificationSettings, setNotificationSettings] = useState({
-    jobAlerts: true,
-    applicationUpdates: true,
-    newMessages: true,
-    marketingEmails: false,
-    emailFrequency: 'daily',
-  });
-
-  // Privacy Settings
-  const [privacySettings, setPrivacySettings] = useState({
-    profileVisibility: 'public',
-    showContactInfo: true,
-    allowMessages: true,
-    showOnlineStatus: true,
-  });
-
-  // Job Preferences
-  const [preferenceSettings, setPreferenceSettings] = useState({
-    remoteWork: 'any',
-    workSchedule: 'flexible',
-    salaryRange: {
-      min: '',
-      max: '',
-    },
-  });
-
   const isMobile = useIsMobile();
 
   const tabs: { id: SettingsTab; label: string; icon: any }[] = [
     { id: 'account', label: 'Account', icon: FiUser },
     { id: 'security', label: 'Security', icon: FiLock },
-    { id: 'notifications', label: 'Notifications', icon: FiBell },
-    { id: 'privacy', label: 'Privacy', icon: FiShield },
-    { id: 'preferences', label: 'Job Prefs', icon: FiBriefcase },
-    { id: 'data', label: 'Data', icon: FiDownload },
   ];
 
   useEffect(() => {
@@ -158,38 +127,6 @@ const JobseekerSettings: React.FC = () => {
   const handleSecurityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setSecuritySettings(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleNotificationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    setNotificationSettings(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-    }));
-  };
-
-  const handlePrivacyChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    setPrivacySettings(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-    }));
-  };
-
-  const handlePreferenceChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    if (name.startsWith('salaryRange.')) {
-      const rangeField = name.split('.')[1];
-      setPreferenceSettings(prev => ({
-        ...prev,
-        salaryRange: {
-          ...prev.salaryRange,
-          [rangeField]: value
-        }
-      }));
-    } else {
-      setPreferenceSettings(prev => ({ ...prev, [name]: value }));
-    }
   };
 
   // Email change functions
@@ -466,97 +403,6 @@ const JobseekerSettings: React.FC = () => {
     }
   };
 
-  const saveNotificationSettings = async () => {
-    toast.success('Notification settings updated successfully!');
-  };
-
-  const savePrivacySettings = async () => {
-    toast.success('Privacy settings updated successfully!');
-  };
-
-  const savePreferenceSettings = async () => {
-    if (!user) return;
-    
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          preferred_work_type: preferenceSettings.remoteWork,
-          salary_expectation: `${preferenceSettings.salaryRange.min} - ${preferenceSettings.salaryRange.max}`,
-        })
-        .eq('auth_id', user.id);
-
-      if (error) throw error;
-      toast.success('Job preferences updated successfully!');
-    } catch (error: any) {
-      toast.error('Failed to update job preferences: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const exportUserData = async () => {
-    if (!user) return;
-    
-    setLoading(true);
-    try {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('auth_id', user.id)
-        .single();
-
-      const dataStr = JSON.stringify({
-        user: {
-          email: user.email,
-          created_at: user.created_at,
-        },
-        profile: profileData,
-        export_date: new Date().toISOString()
-      }, null, 2);
-
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `selectz-data-${user.id}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      toast.success('Data exported successfully!');
-    } catch (error: any) {
-      toast.error('Failed to export data: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deleteAccount = async () => {
-    if (!user || !window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('auth_id', user.id);
-
-      if (profileError) throw profileError;
-
-      toast.success('Account deleted successfully');
-      window.location.href = '/login';
-    } catch (error: any) {
-      toast.error('Failed to delete account: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return isMobile ? (
     <div className="min-h-screen bg-white px-0 py-0">
       {/* Header */}
@@ -628,7 +474,286 @@ const JobseekerSettings: React.FC = () => {
             </button>
           </div>
         )}
-        {/* Repeat similar mobile-friendly cards for other tabs: security, notifications, privacy, preferences, data */}
+        {activeTab === 'security' && (
+          <div className="bg-white rounded-2xl shadow-lg p-5 space-y-6 border border-gray-100 hover:shadow-[0_4px_16px_#185a9d22] focus-within:shadow-[0_4px_16px_#185a9d33] transition-shadow duration-200">
+            <h2 className="text-lg font-bold text-gray-900 mb-2 flex items-center"><FiLock className="mr-2" />Security Settings</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    name="currentPassword"
+                    value={securitySettings.currentPassword}
+                    onChange={handleSecurityChange}
+                    className="w-full p-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showCurrentPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    name="newPassword"
+                    value={securitySettings.newPassword}
+                    onChange={handleSecurityChange}
+                    className="w-full p-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showNewPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    name="confirmPassword"
+                    value={securitySettings.confirmPassword}
+                    onChange={handleSecurityChange}
+                    className="w-full p-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end pt-4">
+              <button
+                onClick={changePassword}
+                disabled={loading || !securitySettings.newPassword || !securitySettings.confirmPassword}
+                className="bg-emerald-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-600 transition-colors disabled:opacity-50 flex items-center"
+              >
+                <FiLock className="w-4 h-4 mr-2" />
+                {loading ? 'Updating...' : 'Update Password'}
+              </button>
+            </div>
+            <div className="border-t border-gray-200 pt-8">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <FiMail className="w-5 h-5 mr-2 text-emerald-600" />
+                Change Email Address
+              </h3>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-blue-700">Current Email: <span className="font-medium">{accountSettings.email}</span></p>
+              </div>
+
+              {!emailChange.showOtpInput ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">New Email Address</label>
+                    <input
+                      type="email"
+                      name="newEmail"
+                      value={emailChange.newEmail}
+                      onChange={handleEmailChange}
+                      placeholder="Enter new email address"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                    <input
+                      type="password"
+                      name="currentPassword"
+                      value={emailChange.currentPassword}
+                      onChange={handleEmailChange}
+                      placeholder="Enter your current password"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={sendEmailOtp}
+                      disabled={loading || !emailChange.newEmail || !emailChange.currentPassword}
+                      className="bg-emerald-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-600 transition-colors disabled:opacity-50 flex items-center"
+                    >
+                      <FiMail className="w-4 h-4 mr-2" />
+                      {loading ? 'Sending...' : 'Send OTP'}
+                    </button>
+                    <button
+                      onClick={sendForgotEmailOtp}
+                      disabled={loading || !emailChange.newEmail}
+                      className="bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Enter OTP</label>
+                    <input
+                      type="text"
+                      name="otp"
+                      value={emailChange.otp}
+                      onChange={handleEmailChange}
+                      placeholder="Enter 6-digit OTP"
+                      maxLength={6}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {emailChange.forgotPassword ? 'OTP sent to your new email address' : 'OTP sent to your current email'}
+                    </p>
+                  </div>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={verifyEmailOtp}
+                      disabled={loading || emailChange.otp.length !== 6}
+                      className="bg-emerald-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-600 transition-colors disabled:opacity-50 flex items-center"
+                    >
+                      <FiCheck className="w-4 h-4 mr-2" />
+                      {loading ? 'Verifying...' : 'Verify OTP'}
+                    </button>
+                    <button
+                      onClick={emailChange.forgotPassword ? resendEmailOtp : resendEmailOtp}
+                      disabled={emailChange.countdown > 0}
+                      className="bg-gray-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-600 transition-colors disabled:opacity-50"
+                    >
+                      {emailChange.countdown > 0 ? `Resend (${emailChange.countdown}s)` : 'Resend OTP'}
+                    </button>
+                    <button
+                      onClick={() => setEmailChange({
+                        newEmail: '',
+                        currentPassword: '',
+                        otp: '',
+                        showOtpInput: false,
+                        otpSent: false,
+                        countdown: 0,
+                        forgotPassword: false,
+                      })}
+                      className="bg-red-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-600 transition-colors flex items-center"
+                    >
+                      <FiX className="w-4 h-4 mr-2" />
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="border-t border-gray-200 pt-8">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <FiSmartphone className="w-5 h-5 mr-2 text-emerald-600" />
+                Change Phone Number
+              </h3>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-blue-700">Current Phone: <span className="font-medium">{accountSettings.phone || 'Not set'}</span></p>
+              </div>
+
+              {!phoneChange.showOtpInput ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">New Phone Number</label>
+                    <input
+                      type="tel"
+                      name="newPhone"
+                      value={phoneChange.newPhone}
+                      onChange={handlePhoneChange}
+                      placeholder="Enter new phone number"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                    <input
+                      type="password"
+                      name="currentPassword"
+                      value={phoneChange.currentPassword}
+                      onChange={handlePhoneChange}
+                      placeholder="Enter your current password"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={sendPhoneOtp}
+                      disabled={loading || !phoneChange.newPhone || !phoneChange.currentPassword}
+                      className="bg-emerald-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-600 transition-colors disabled:opacity-50 flex items-center"
+                    >
+                      <FiSmartphone className="w-4 h-4 mr-2" />
+                      {loading ? 'Sending...' : 'Send OTP'}
+                    </button>
+                    <button
+                      onClick={sendForgotPhoneOtp}
+                      disabled={loading || !phoneChange.newPhone}
+                      className="bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Enter OTP</label>
+                    <input
+                      type="text"
+                      name="otp"
+                      value={phoneChange.otp}
+                      onChange={handlePhoneChange}
+                      placeholder="Enter 6-digit OTP"
+                      maxLength={6}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {phoneChange.forgotPassword ? 'OTP sent to your new phone number' : 'OTP sent to your current email'}
+                    </p>
+                  </div>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={verifyPhoneOtp}
+                      disabled={loading || phoneChange.otp.length !== 6}
+                      className="bg-emerald-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-600 transition-colors disabled:opacity-50 flex items-center"
+                    >
+                      <FiCheck className="w-4 h-4 mr-2" />
+                      {loading ? 'Verifying...' : 'Verify OTP'}
+                    </button>
+                    <button
+                      onClick={phoneChange.forgotPassword ? resendPhoneOtp : resendPhoneOtp}
+                      disabled={phoneChange.countdown > 0}
+                      className="bg-gray-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-600 transition-colors disabled:opacity-50"
+                    >
+                      {phoneChange.countdown > 0 ? `Resend (${phoneChange.countdown}s)` : 'Resend OTP'}
+                    </button>
+                    <button
+                      onClick={() => setPhoneChange({
+                        newPhone: '',
+                        currentPassword: '',
+                        otp: '',
+                        showOtpInput: false,
+                        otpSent: false,
+                        countdown: 0,
+                        forgotPassword: false,
+                      })}
+                      className="bg-red-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-600 transition-colors flex items-center"
+                    >
+                      <FiX className="w-4 h-4 mr-2" />
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   ) : (
@@ -1084,62 +1209,7 @@ const JobseekerSettings: React.FC = () => {
               )}
 
               {/* Other tabs would go here - simplified for brevity */}
-              {activeTab === 'notifications' && (
-                <div className="p-8">
-                  <div className="flex items-center mb-6">
-                    <FiBell className="w-6 h-6 text-emerald-600 mr-3" />
-                    <h2 className="text-2xl font-semibold text-gray-900">Notification Preferences</h2>
-              </div>
-                  <p className="text-gray-600">Notification settings coming soon...</p>
-                </div>
-              )}
-
-              {activeTab === 'privacy' && (
-                <div className="p-8">
-                  <div className="flex items-center mb-6">
-                    <FiShield className="w-6 h-6 text-emerald-600 mr-3" />
-                    <h2 className="text-2xl font-semibold text-gray-900">Privacy Settings</h2>
-              </div>
-                  <p className="text-gray-600">Privacy settings coming soon...</p>
-            </div>
-              )}
-
-              {activeTab === 'preferences' && (
-                <div className="p-8">
-                  <div className="flex items-center mb-6">
-                    <FiBriefcase className="w-6 h-6 text-emerald-600 mr-3" />
-                    <h2 className="text-2xl font-semibold text-gray-900">Job Preferences</h2>
-            </div>
-                  <p className="text-gray-600">Job preferences coming soon...</p>
-          </div>
-        )}
-
-              {activeTab === 'data' && (
-                <div className="p-8">
-                  <div className="flex items-center mb-6">
-                    <FiDownload className="w-6 h-6 text-emerald-600 mr-3" />
-                    <h2 className="text-2xl font-semibold text-gray-900">Data & Export</h2>
-                  </div>
-                  <div className="space-y-4">
-            <button
-                      onClick={exportUserData}
-                      disabled={loading}
-                      className="bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center"
-                    >
-                      <FiDownload className="w-4 h-4 mr-2" />
-                      {loading ? 'Exporting...' : 'Export Data'}
-                    </button>
-                    <button
-                      onClick={deleteAccount}
-                      disabled={loading}
-                      className="bg-red-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center"
-                    >
-                      <FiTrash2 className="w-4 h-4 mr-2" />
-                      {loading ? 'Deleting...' : 'Delete Account'}
-            </button>
-          </div>
-        </div>
-              )}
+              {/* Removed notifications, privacy, preferences, data tabs */}
             </div>
           </div>
         </div>

@@ -996,7 +996,7 @@ const ModernMultiStepInternshipForm: React.FC = () => {
     setSubmitting(true);
     try {
       if (!user?.id) {
-        toast.error('Please sign in to post an internship');
+        toast.error('Please login to post an internship');
         return;
       }
 

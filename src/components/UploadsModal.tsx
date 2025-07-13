@@ -20,7 +20,7 @@ type VideoState = 'initial' | 'recording' | 'preview' | 'details' | 'saved';
 type ResumeState = 'initial' | 'uploaded' | 'saved';
 
 const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
-  const { user } = useContext(AuthContext);
+  const { user, refreshProfile } = useContext(AuthContext);
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<'videos' | 'resumes'>('videos');
   
@@ -531,6 +531,10 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
         setSuccess(null);
       }, 5000);
 
+      if (activeTab === 'videos') {
+        await refreshProfile();
+      }
+
     } catch (err: any) {
       console.error('Error saving changes:', err);
       setError(err.message || 'Failed to save changes. Please try again.');
@@ -573,6 +577,8 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
         setSuccess(null);
       }, 3000);
 
+      await refreshProfile();
+
     } catch (err: any) {
       console.error('Error deleting video:', err);
       setError('Failed to delete video. Please try again.');
@@ -613,6 +619,8 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
       setTimeout(() => {
         setSuccess(null);
       }, 3000);
+
+      await refreshProfile();
 
     } catch (err: any) {
       console.error('Error deleting resume:', err);

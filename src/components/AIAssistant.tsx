@@ -49,7 +49,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ size = 'small' }) => {
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer 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',
+          'Authorization': 'Bearer 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',
           'HTTP-Referer': 'https://www.risky.com',
           'X-Title': 'style',
           'Content-Type': 'application/json',

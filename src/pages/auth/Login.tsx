@@ -41,42 +41,37 @@ const Login: React.FC = () => {
           console.error('Session check error:', error);
           return;
         }
-        if (data?.session) {
-          console.log('Supabase session found on load:', data.session);
-          // If user is already logged in, redirect them
-          if (data.session.user) {
-            // Check their role and redirect accordingly
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('roles')
+        // Only redirect if a valid session and user exist
+        if (data?.session && data.session.user) {
+          // Check their role and redirect accordingly
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('roles')
+            .eq('auth_id', data.session.user.id)
+            .single();
+          if (profileData?.roles?.includes('employer')) {
+            // Check if they have company details
+            const { data: companyData } = await supabase
+              .from('companies')
+              .select('*')
               .eq('auth_id', data.session.user.id)
-              .single();
-            
-            if (profileData?.roles?.includes('employer')) {
-              // Check if they have company details
-              const { data: companyData } = await supabase
-                .from('companies')
-                .select('*')
-                .eq('auth_id', data.session.user.id)
-                .maybeSingle();
-              
-              if (companyData) {
-                navigate('/employer/dashboard');
-              } else {
-                navigate('/employer/company-details');
-              }
+              .maybeSingle();
+            if (companyData) {
+              navigate('/employer/dashboard');
             } else {
-              navigate('/');
+              navigate('/employer/company-details');
             }
+          } else {
+            navigate('/');
           }
         } else {
-          console.warn('No Supabase session found on load.');
+          // No valid session, do not redirect
+          // Stay on login page
         }
       } catch (err) {
         console.error('Error checking session:', err);
       }
     };
-    
     checkSession();
   }, [navigate]);
 
@@ -299,6 +294,7 @@ const Login: React.FC = () => {
           navigate('/employer/company-details');
         }
       } else {
+        // If jobseeker, always redirect to home page
         navigate('/');
       }
     } catch (err: any) {

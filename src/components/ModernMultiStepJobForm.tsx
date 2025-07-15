@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaCheckCircle, FaArrowRight, FaArrowLeft, FaRegBuilding, FaMoneyBillWave, FaUserTie, FaClipboardList, FaRegCalendarAlt, FaMapMarkerAlt, FaKeyboard, FaCalendarAlt, FaUsers, FaClock, FaListUl, FaDollarSign, FaGift, FaStar, FaGraduationCap, FaLanguage, FaBriefcase, FaIndustry, FaUserFriends, FaVenusMars, FaCode, FaFileAlt, FaEnvelope, FaClock as FaDeadline, FaEdit, FaPaperPlane, FaSpinner, FaSave, FaFolderOpen, FaEye } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import DraftManager from './DraftManager';
 import CustomQuestionsManager from './CustomQuestionsManager';
 import toast from 'react-hot-toast';
+import { AuthContext } from '../contexts/AuthContext';
 
 // Placeholder for all the field types from JobFormData
 interface CustomQuestion {
@@ -96,7 +97,8 @@ const steps = [
   { label: 'Compensation', icon: <FaMoneyBillWave /> },
   { label: 'Requirements', icon: <FaUserTie /> },
   { label: 'Custom Questions', icon: <FaFileAlt /> },
-  { label: 'Preview & Submit', icon: <FaRegCalendarAlt /> },
+  { label: 'Summary', icon: <FaEye /> },
+  { label: 'Payment', icon: <FaMoneyBillWave /> },
 ];
 
 const initialFormData: JobFormData = {
@@ -139,6 +141,59 @@ const initialFormData: JobFormData = {
   customQuestions: [],
 };
 
+// Add CouponValidation type
+interface CouponValidation {
+  valid: boolean;
+  message?: string;
+  discount_type?: string;
+  discount_value?: number;
+  discount_amount?: number;
+  coupon_id?: string;
+}
+
+// Add at the top, after other useState declarations
+const plans = [
+  {
+    name: 'Basic',
+    price: 1999,
+    features: [
+      '30 days job listing',
+      'Basic job visibility',
+      'Standard application management',
+      'Email support',
+      'Basic candidate filtering',
+    ],
+  },
+  {
+    name: 'Professional',
+    price: 3499,
+    features: [
+      '30 days job listing',
+      'Featured job placement',
+      'Priority in search results',
+      'Advanced application management',
+      'Priority support',
+      'Advanced candidate filtering',
+      'Company branding',
+    ],
+  },
+  {
+    name: 'Enterprise',
+    price: 5999,
+    features: [
+      '30 days job listing',
+      'Premium featured placement',
+      'Top priority in search results',
+      'Advanced application management',
+      '24/7 dedicated support',
+      'Advanced candidate filtering',
+      'Custom branding',
+      'Analytics dashboard',
+      'API access',
+    ],
+  },
+];
+
 const ModernMultiStepJobForm: React.FC = () => {
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState<JobFormData>(initialFormData);
@@ -147,7 +202,15 @@ const ModernMultiStepJobForm: React.FC = () => {
   const [showDraftManager, setShowDraftManager] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useContext(AuthContext);
+  const [showPaymentStep, setShowPaymentStep] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponValidation, setCouponValidation] = useState<CouponValidation | null>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 
   // Track changes for auto-save detection
   useEffect(() => {
@@ -1298,21 +1361,10 @@ const ModernMultiStepJobForm: React.FC = () => {
         </div>
         
         <button
-          onClick={handleSubmit}
-          disabled={submitting}
+          onClick={() => setStep(6)}
           className="w-full mt-6 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold flex items-center justify-center gap-2 shadow-lg hover:bg-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {submitting ? (
-            <>
-              <FaSpinner className="animate-spin" />
-              Posting Job...
-            </>
-          ) : (
-            <>
-              <FaPaperPlane />
-              Post Job Now
-            </>
-          )}
+          <FaArrowRight /> Next
         </button>
       </div>
     </div>
@@ -1337,6 +1389,13 @@ const ModernMultiStepJobForm: React.FC = () => {
     }
     if (step === 4) {
       if (!validateStep5()) return;
+      setStep((prev) => prev + 1); // Move to payment step
+      return;
+    }
+    // Only allow submit after paymentSuccess is true
+    if (step === 5 && !paymentSuccess) {
+      toast.error('Please complete payment before posting the job.');
+      return;
     }
     setStep((prev) => prev + 1);
   };
@@ -1344,6 +1403,10 @@ const ModernMultiStepJobForm: React.FC = () => {
 
   // Submit handler
   const handleSubmit = async () => {
+    if (!paymentSuccess) {
+      toast.error('Please complete payment before posting the job.');
+      return;
+    }
     setSubmitting(true);
     
     try {
@@ -1433,6 +1496,269 @@ const ModernMultiStepJobForm: React.FC = () => {
     }
   };
 
+  // Helper to dynamically load Razorpay script
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (document.getElementById('razorpay-script')) return resolve(true);
+      const script = document.createElement('script');
+      script.id = 'razorpay-script';
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  // Coupon validation logic (similar to Billing)
+  const validateCoupon = async (amount: number) => {
+    setIsValidatingCoupon(true);
+    try {
+      const { data, error } = await supabase.rpc('validate_coupon', {
+        in_code: couponCode.trim(),
+        in_user_id: user?.id,
+        in_product_type: 'job_post',
+        in_purchase_amount: amount
+      });
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setCouponValidation(data[0] as CouponValidation);
+      } else {
+        setCouponValidation({ valid: false, message: 'Invalid coupon' });
+      }
+    } catch (e) {
+      setCouponValidation({ valid: false, message: 'Failed to validate coupon' });
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+  const getFinalPrice = (basePrice: number) => {
+    if (couponValidation?.valid && couponValidation.discount_amount) {
+      return Math.max(0, basePrice - couponValidation.discount_amount);
+    }
+    return basePrice;
+  };
+
+  // Razorpay payment handler
+  const handleRazorpayPayment = async (amount: number) => {
+    setIsProcessingPayment(true);
+    await loadRazorpayScript();
+    let accessToken = (user as any)?.access_token;
+    if (!accessToken) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      accessToken = sessionData?.session?.access_token;
+    }
+    let data;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/razorpay-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+        body: JSON.stringify({
+          amount,
+          currency: 'INR',
+          description: 'Job Posting',
+          user_id: user?.id,
+          payment_type: 'job_posting'
+        })
+      });
+      data = await res.json();
+    } catch (e) {
+      setIsProcessingPayment(false);
+      toast.error('Failed to connect to payment server');
+      return;
+    }
+    if (!data.success) {
+      setIsProcessingPayment(false);
+      toast.error('Failed to initiate payment');
+      return;
+    }
+    const options = {
+      key: data.key_id,
+      amount: data.amount,
+      currency: data.currency,
+      name: 'Selectz',
+      image: '/selectz.logo.png',
+      description: 'Job Posting',
+      order_id: data.order_id,
+      handler: function (response: any) {
+        setPaymentSuccess(true);
+        toast.success('Payment successful!');
+        handleSubmit();
+      },
+      prefill: {
+        email: user?.email,
+      },
+      theme: { color: '#185a9d' },
+    };
+    // @ts-ignore
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+    setIsProcessingPayment(false);
+  };
+
+  // Replace the last step (summary/submit) with a payment step
+  const renderPaymentStep = () => (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+          <FaMoneyBillWave className="text-green-600" /> Payment & Confirmation
+        </h2>
+        <p className="text-gray-500 mb-4">Select a plan and complete payment to post your job.</p>
+      </div>
+      {renderPlanSelection()}
+      <div className="bg-white p-6 rounded-xl shadow-lg">
+        <h3 className="text-xl font-semibold text-gray-800 mb-4">Payment Details</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+          <div>
+            <p><span className="font-medium">Job Title:</span> {formData.jobTitle}</p>
+            <p><span className="font-medium">Selected Plan:</span> {selectedPlan || 'None'}</p>
+            <p><span className="font-medium">Total Cost:</span> <span className="font-bold text-green-600">₹{getFinalPrice(getSelectedPlanPrice())}</span></p>
+          </div>
+          <div>
+            <p><span className="font-medium">Coupon Code:</span> {couponCode}</p>
+            {couponValidation && (
+              <p className={`font-medium ${couponValidation.valid ? 'text-green-600' : 'text-red-600'}`}>
+                {couponValidation.message}
+                {couponValidation.discount_amount && ` (Discount: ₹${couponValidation.discount_amount})`}
+              </p>
+            )}
+            {isValidatingCoupon && <p className="text-gray-500">Validating coupon...</p>}
+          </div>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 mt-4">
+          <input
+            type="text"
+            placeholder="Enter coupon code (if any)"
+            value={couponCode}
+            onChange={(e) => setCouponCode(e.target.value)}
+            className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={!selectedPlan}
+          />
+          <button
+            onClick={() => {
+              if (couponCode.trim() && selectedPlan) {
+                validateCoupon(getFinalPrice(getSelectedPlanPrice()));
+              } else {
+                setCouponValidation({ valid: false, message: 'Please select a plan and enter a coupon code' });
+              }
+            }}
+            disabled={isValidatingCoupon || !couponCode.trim() || !selectedPlan}
+            className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold flex items-center justify-center gap-2 shadow-lg hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isValidatingCoupon ? <FaSpinner className="animate-spin" /> : <FaCheckCircle />} Apply Coupon
+          </button>
+        </div>
+        <div className="mt-6 flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={() => handleFreeOrPaidPayment(getFinalPrice(getSelectedPlanPrice()))}
+            disabled={isProcessingPayment || !selectedPlan}
+            className="flex-1 px-6 py-3 rounded-xl bg-green-600 text-white font-semibold flex items-center justify-center gap-2 shadow-lg hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isProcessingPayment ? <FaSpinner className="animate-spin" /> : <FaCheckCircle />} Pay & Post Job
+          </button>
+        </div>
+        {paymentSuccess && (
+          <div className="mt-6 bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg relative" role="alert">
+            <strong className="font-bold">Success!</strong>
+            <span className="block sm:inline"> Payment successful! Your job is now live.</span>
+            <span className="absolute top-0 bottom-0 right-0 px-4 py-3">
+              <button onClick={() => setPaymentSuccess(false)} className="text-green-800">
+                <svg className="fill-current h-6 w-6" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              </button>
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const handleFreeOrPaidPayment = async (amount: number) => {
+    if (amount <= 0) {
+      setIsProcessingPayment(true);
+      let accessToken = (user as any)?.access_token;
+      if (!accessToken) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        accessToken = sessionData?.session?.access_token;
+      }
+      let data;
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/razorpay-payment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+          body: JSON.stringify({
+            amount: 0,
+            currency: 'INR',
+            description: 'Job Posting (Free via Coupon)',
+            user_id: user?.id,
+            payment_type: 'job_posting',
+            is_free: true
+          })
+        });
+        data = await res.json();
+      } catch (e) {
+        setIsProcessingPayment(false);
+        toast.error('Failed to connect to payment server');
+        return;
+      }
+      if (!data.success) {
+        setIsProcessingPayment(false);
+        toast.error('Failed to record free payment');
+        return;
+      }
+      setPaymentSuccess(true);
+      toast.success('Job posted for free!');
+      handleSubmit();
+      setIsProcessingPayment(false);
+      return;
+    }
+    await handleRazorpayPayment(amount);
+  };
+
+  const getSelectedPlanPrice = () => {
+    const plan = plans.find((p) => p.name === selectedPlan);
+    return plan ? plan.price : 0;
+  };
+
+  const renderPlanSelection = () => (
+    <div className="mb-8">
+      <div className="flex justify-center mb-6">
+        <div className="inline-flex rounded-full bg-gray-100 p-1">
+          <button className="px-6 py-2 rounded-full bg-blue-600 text-white font-semibold focus:outline-none">Per Post</button>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {plans.map((plan) => (
+          <div
+            key={plan.name}
+            className={`rounded-2xl border-2 p-6 flex flex-col items-center shadow transition-all duration-200 cursor-pointer ${selectedPlan === plan.name ? 'border-green-500 bg-green-50 shadow-lg' : 'border-gray-200 bg-white hover:shadow-md'}`}
+            onClick={() => setSelectedPlan(plan.name)}
+          >
+            <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+            <div className="text-3xl font-extrabold text-blue-800 mb-1">
+              ₹ {plan.price.toLocaleString()}
+            </div>
+            <div className="text-sm text-gray-500 mb-2">per job post</div>
+            <div className="text-green-600 text-sm mb-4">1 job post</div>
+            <ul className="mb-6 space-y-2 text-gray-700 text-sm text-left">
+              {plan.features.map((f, i) => (
+                <li key={i} className="flex items-center gap-2">
+                  <FaCheckCircle className="text-green-500" /> {f}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className={`w-full px-4 py-2 rounded-lg font-semibold transition-all duration-200 ${selectedPlan === plan.name ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+              onClick={e => { e.stopPropagation(); setSelectedPlan(plan.name); }}
+            >
+              {selectedPlan === plan.name ? 'Selected' : 'Select Plan'}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   // Main render
   return (
     <div className="max-w-2xl mx-auto py-10">
@@ -1489,12 +1815,13 @@ const ModernMultiStepJobForm: React.FC = () => {
           transition={{ duration: 0.4 }}
           className="bg-white rounded-2xl shadow-2xl p-8 mb-8"
         >
-                      {step === 0 && renderStep1()}
-            {step === 1 && renderStep2()}
-            {step === 2 && renderStep3()}
-            {step === 3 && renderStep4()}
-            {step === 4 && renderStep5()}
-            {step === 5 && renderStep6()}
+          {step === 0 && renderStep1()}
+          {step === 1 && renderStep2()}
+          {step === 2 && renderStep3()}
+          {step === 3 && renderStep4()}
+          {step === 4 && renderStep5()}
+          {step === 5 && renderStep6()}
+          {step === 6 && renderPaymentStep()}
         </motion.div>
       </AnimatePresence>
 
@@ -1515,7 +1842,7 @@ const ModernMultiStepJobForm: React.FC = () => {
           >
             Next <FaArrowRight />
           </button>
-        ) : (
+        ) : step === steps.length - 1 ? (
           <button
             className="px-6 py-2 rounded-full bg-green-600 text-white font-semibold flex items-center gap-2 shadow-lg hover:bg-green-700 transition-all duration-200"
             onClick={handleSubmit}
@@ -1523,7 +1850,7 @@ const ModernMultiStepJobForm: React.FC = () => {
           >
             {submitting ? <FaSpinner className="animate-spin" /> : <FaCheckCircle />} Post Job
           </button>
-        )}
+        ) : null}
       </div>
 
       {/* Draft Manager Modal */}

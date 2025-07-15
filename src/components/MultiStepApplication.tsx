@@ -88,19 +88,16 @@ const MultiStepApplication: React.FC<MultiStepApplicationProps> = ({ type, onClo
     }
   };
 
-  const uploadFile = async (file: File, folder: string): Promise<string> => {
+  const uploadFile = async (file: File, user: any, type: 'resume' | 'video'): Promise<string> => {
     const ext = file.name.split('.').pop();
-    const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
-    
-    const { data, error } = await supabase.storage.from('uploads').upload(fileName, file, { 
+    const bucket = type === 'video' ? 'job-seeker-intro-videos' : 'job-seeker-resumes';
+    const fileName = `${user.id}/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+    const { data, error } = await supabase.storage.from(bucket).upload(fileName, file, { 
       upsert: true,
       cacheControl: '3600'
     });
-    
     if (error) throw error;
-    
-    // Get the public URL
-    const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName);
+    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
     return urlData.publicUrl;
   };
 
@@ -167,25 +164,21 @@ const MultiStepApplication: React.FC<MultiStepApplicationProps> = ({ type, onClo
 
   const handleNext = async () => {
     if (currentStep === 1) {
-      // Upload files if selected
       setUploading(true);
       try {
         let finalResumeUrl = applicationData.resumeUrl;
         let finalVideoUrl = applicationData.videoUrl;
-
-        if (resumeFile) {
-          finalResumeUrl = await uploadFile(resumeFile, 'resumes');
+        if (resumeFile && user) {
+          finalResumeUrl = await uploadFile(resumeFile, user, 'resume');
         }
-        if (videoFile) {
-          finalVideoUrl = await uploadFile(videoFile, 'videos');
+        if (videoFile && user) {
+          finalVideoUrl = await uploadFile(videoFile, user, 'video');
         }
-
         setApplicationData(prev => ({
           ...prev,
           resumeUrl: finalResumeUrl,
           videoUrl: finalVideoUrl
         }));
-
         setCurrentStep(2);
       } catch (error) {
         console.error('Upload error:', error);
@@ -194,7 +187,6 @@ const MultiStepApplication: React.FC<MultiStepApplicationProps> = ({ type, onClo
         setUploading(false);
       }
     } else if (currentStep === 2) {
-      // Validate required questions before proceeding
       if (!validateRequiredQuestions()) {
         return;
       }

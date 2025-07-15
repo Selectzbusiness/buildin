@@ -55,57 +55,30 @@ import AboutUs from './components/AboutUs';
 
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, profile } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   if (!user) {
     return <Navigate to="/login" />;
-  }
-  // If user has employer role, redirect to employer dashboard
-  if (profile?.roles?.includes('employer')) {
-    return <Navigate to="/employer/dashboard" />;
-  }
-  // If user has jobseeker role, redirect to home
-  if (profile?.roles?.includes('jobseeker')) {
-    return <Navigate to="/" />;
   }
   return <>{children}</>;
 };
 
-// Role-specific protected route
-const RoleProtectedRoute: React.FC<{ 
+// Role-specific protected route (now only checks authentication)
+const RoleProtectedRoute: React.FC<{
   children: React.ReactNode;
   allowedRole: 'employer' | 'jobseeker';
-}> = ({ children, allowedRole }) => {
-  const { user, profile } = useContext(AuthContext);
+}> = ({ children }) => {
+  const { user } = useContext(AuthContext);
   if (!user) {
     return <Navigate to="/login" />;
-  }
-  // Check if user has the required role
-  if (!profile?.roles?.includes(allowedRole)) {
-    // Redirect based on what roles they do have
-    if (profile?.roles?.includes('employer')) {
-      return <Navigate to="/employer/dashboard" />;
-    } else if (profile?.roles?.includes('jobseeker')) {
-      return <Navigate to="/" />;
-    } else {
-      return <Navigate to="/login" />;
-    }
   }
   return <>{children}</>;
 };
 
-// Special route for company details that allows employers without company profile
+// Special route for company details that allows any authenticated user
 const CompanyDetailsRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, profile } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   if (!user) {
     return <Navigate to="/login" />;
-  }
-  // Only allow employers to access this route
-  if (!profile?.roles?.includes('employer')) {
-    if (profile?.roles?.includes('jobseeker')) {
-      return <Navigate to="/" />;
-    } else {
-      return <Navigate to="/login" />;
-    }
   }
   return <>{children}</>;
 };

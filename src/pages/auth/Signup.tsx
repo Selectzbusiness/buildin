@@ -10,7 +10,6 @@ const Signup: React.FC = () => {
     password: '',
     confirmPassword: '',
     fullName: '',
-    role: 'candidate' as 'candidate' | 'employer',
   });
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -78,7 +77,6 @@ const Signup: React.FC = () => {
         options: {
           data: {
             full_name: formData.fullName,
-            role: formData.role,
           },
         },
       });
@@ -298,28 +296,6 @@ const Signup: React.FC = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268-2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                   )}
-                </button>
-              </div>
-            </div>
-            {/* Role selection */}
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">I want to join as</label>
-              <div className="flex space-x-4">
-                <button
-                  type="button"
-                  className={`flex-1 px-4 py-2 rounded-2xl border text-sm font-semibold transition-all duration-200 ${formData.role === 'candidate' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}
-                  onClick={() => setFormData({ ...formData, role: 'candidate' })}
-                  disabled={loading}
-                >
-                  Candidate
-                </button>
-                <button
-                  type="button"
-                  className={`flex-1 px-4 py-2 rounded-2xl border text-sm font-semibold transition-all duration-200 ${formData.role === 'employer' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200'}`}
-                  onClick={() => setFormData({ ...formData, role: 'employer' })}
-                  disabled={loading}
-                >
-                  Employer
                 </button>
               </div>
             </div>

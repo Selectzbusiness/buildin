@@ -11,7 +11,7 @@ import { useEffect } from 'react';
 import VideoVerifiedTag from '../../components/VideoVerifiedTag';
 
 const MainLayoutMobile: React.FC = () => {
-  const { profile } = useContext(AuthContext) as any;
+  const { profile, setUser, setProfile } = useContext(AuthContext) as any;
   const [showUploadsModal, setShowUploadsModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const navigate = useNavigate();
@@ -169,16 +169,19 @@ const MainLayoutMobile: React.FC = () => {
               <span className="flex-1 text-base font-semibold text-black">Favourites</span>
               <FiArrowRight className="w-4 h-4 text-gray-400" />
             </Link>
-            <button onClick={() => { navigate('/employer/dashboard'); setShowProfileMenu(false); }} className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition shadow-sm w-full text-left">
-              <FiBriefcase className="w-6 h-6 text-indigo-500" />
-              <span className="flex-1 text-base font-semibold text-black">Post Jobs</span>
-              <FiArrowRight className="w-4 h-4 text-gray-400" />
-            </button>
+            {/* Switch to Employer Button */}
+            <Link to="/employer/dashboard" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-4 p-4 rounded-xl bg-blue-50 hover:bg-blue-100 transition shadow-sm">
+              <FiBriefcase className="w-6 h-6 text-blue-600" />
+              <span className="flex-1 text-base font-semibold text-black">Post Jobs (Employer)</span>
+              <FiArrowRight className="w-4 h-4 text-blue-400" />
+            </Link>
             <button onClick={async () => {
               try {
                 await supabase.auth.signOut();
-                setShowProfileMenu(false);
                 navigate('/login');
+                setUser(null);
+                setProfile(null);
+                setShowProfileMenu(false);
               } catch (err) {
                 toast.error('Failed to sign out');
               }

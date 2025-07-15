@@ -64,6 +64,40 @@ interface InternshipDraftManagerProps {
   currentStep: number;
 }
 
+function cleanNumericFields(draft: any) {
+  // Map camelCase form keys to DB snake_case keys for numeric fields
+  const mapping = {
+    stipendAmount: 'stipend_amount',
+    travelAllowanceAmount: 'travel_allowance_amount',
+    minimumGpa: 'minimum_gpa',
+    hoursPerWeek: 'hours_per_week',
+    // add any other numeric fields here
+  };
+  const cleaned = { ...draft };
+  for (const [formKey, dbKey] of Object.entries(mapping)) {
+    if (cleaned[formKey] === "") cleaned[formKey] = null;
+    if (cleaned[dbKey] === "") cleaned[dbKey] = null;
+  }
+  // Clean pincode: must be 6 digits or null
+  if (!cleaned.pincode || typeof cleaned.pincode !== 'string' || !/^[0-9]{6}$/.test(cleaned.pincode)) {
+    cleaned.pincode = null;
+  }
+  // Clean enum/check fields for allowed values
+  const allowedInternshipTypes = ['onsite', 'remote', 'hybrid'];
+  if (!allowedInternshipTypes.includes(cleaned.internshipType)) cleaned.internshipType = null;
+  if (!allowedInternshipTypes.includes(cleaned.internship_type)) cleaned.internship_type = null;
+  const allowedStipendTypes = ['paid', 'unpaid', 'performance_based', 'academic_credit'];
+  if (!allowedStipendTypes.includes(cleaned.stipendType)) cleaned.stipendType = null;
+  if (!allowedStipendTypes.includes(cleaned.stipend_type)) cleaned.stipend_type = null;
+  const allowedStipendFrequencies = ['monthly', 'weekly', 'one_time', 'project_based'];
+  if (!allowedStipendFrequencies.includes(cleaned.stipendFrequency)) cleaned.stipendFrequency = null;
+  if (!allowedStipendFrequencies.includes(cleaned.stipend_frequency)) cleaned.stipend_frequency = null;
+  const allowedExperienceLevels = ['no_experience', 'beginner', 'intermediate', 'advanced'];
+  if (!allowedExperienceLevels.includes(cleaned.experienceLevel)) cleaned.experienceLevel = null;
+  if (!allowedExperienceLevels.includes(cleaned.experience_level)) cleaned.experience_level = null;
+  return cleaned;
+}
+
 const InternshipDraftManager: React.FC<InternshipDraftManagerProps> = ({
   isOpen,
   onClose,
@@ -111,54 +145,74 @@ const InternshipDraftManager: React.FC<InternshipDraftManagerProps> = ({
         alert('No data to save. Please fill in at least one field.');
         return;
       }
+      // Get current user ID
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      if (!userId) {
+        alert('You must be logged in to save drafts.');
+        setSaving(false);
+        return;
+      }
+      // Build a draft object with both camelCase and snake_case keys
+      const draftObj = {
+        ...currentFormData,
+        stipend_amount: currentFormData.stipendAmount,
+        travel_allowance_amount: currentFormData.travelAllowanceAmount,
+        minimum_gpa: currentFormData.minimumGpa,
+        hours_per_week: currentFormData.hoursPerWeek,
+        // add any other numeric fields here
+      };
+      const cleanedDraft = cleanNumericFields(draftObj);
       const { data, error } = await supabase
         .from('internship_drafts')
         .insert({
+          user_id: userId,
           draft_name: name,
           current_step: currentStep,
           is_complete: false,
-          internship_title: currentFormData.internshipTitle,
-          internship_description: currentFormData.internshipDescription,
-          internship_type: currentFormData.internshipType,
-          city: currentFormData.city,
-          area: currentFormData.area,
-          pincode: currentFormData.pincode,
-          street_address: currentFormData.streetAddress,
-          duration: currentFormData.duration,
-          custom_duration: currentFormData.customDuration,
-          start_date: currentFormData.startDate,
-          flexible_start: currentFormData.flexibleStart,
-          application_deadline: currentFormData.applicationDeadline,
-          stipend_type: currentFormData.stipendType,
-          stipend_amount: currentFormData.stipendAmount,
-          stipend_frequency: currentFormData.stipendFrequency,
-          academic_credit: currentFormData.academicCredit,
-          academic_credit_details: currentFormData.academicCreditDetails,
-          benefits: currentFormData.benefits,
-          custom_benefits: currentFormData.customBenefits,
-          travel_allowance: currentFormData.travelAllowance,
-          travel_allowance_amount: currentFormData.travelAllowanceAmount,
-          education_level: currentFormData.educationLevel,
-          current_year: currentFormData.currentYear,
-          minimum_gpa: currentFormData.minimumGpa,
-          gpa_required: currentFormData.gpaRequired,
-          academic_background: currentFormData.academicBackground,
-          custom_academic_background: currentFormData.customAcademicBackground,
-          experience_level: currentFormData.experienceLevel,
-          skills_required: currentFormData.skillsRequired,
-          custom_skills: currentFormData.customSkills,
-          languages: currentFormData.languages,
-          custom_language: currentFormData.customLanguage,
-          required_documents: currentFormData.requiredDocuments,
-          custom_required_documents: currentFormData.customRequiredDocuments,
-          learning_objectives: currentFormData.learningObjectives,
-          mentorship_available: currentFormData.mentorshipAvailable,
-          mentorship_details: currentFormData.mentorshipDetails,
-          project_based: currentFormData.projectBased,
-          project_details: currentFormData.projectDetails,
-          application_process: currentFormData.applicationProcess,
-          interview_process: currentFormData.interviewProcess,
-          notification_email: currentFormData.notificationEmail,
+          internship_title: cleanedDraft.internshipTitle,
+          internship_description: cleanedDraft.internshipDescription,
+          internship_type: cleanedDraft.internshipType,
+          city: cleanedDraft.city,
+          area: cleanedDraft.area,
+          pincode: cleanedDraft.pincode,
+          street_address: cleanedDraft.streetAddress,
+          duration: cleanedDraft.duration,
+          custom_duration: cleanedDraft.customDuration,
+          start_date: cleanedDraft.startDate,
+          flexible_start: cleanedDraft.flexibleStart,
+          application_deadline: cleanedDraft.applicationDeadline,
+          stipend_type: cleanedDraft.stipendType,
+          stipend_amount: cleanedDraft.stipend_amount,
+          stipend_frequency: cleanedDraft.stipendFrequency,
+          academic_credit: cleanedDraft.academicCredit,
+          academic_credit_details: cleanedDraft.academicCreditDetails,
+          benefits: cleanedDraft.benefits,
+          custom_benefits: cleanedDraft.customBenefits,
+          travel_allowance: cleanedDraft.travelAllowance,
+          travel_allowance_amount: cleanedDraft.travel_allowance_amount,
+          education_level: cleanedDraft.educationLevel,
+          current_year: cleanedDraft.currentYear,
+          minimum_gpa: cleanedDraft.minimum_gpa,
+          gpa_required: cleanedDraft.gpaRequired,
+          academic_background: cleanedDraft.academicBackground,
+          custom_academic_background: cleanedDraft.customAcademicBackground,
+          experience_level: cleanedDraft.experienceLevel,
+          skills_required: cleanedDraft.skillsRequired,
+          custom_skills: cleanedDraft.customSkills,
+          languages: cleanedDraft.languages,
+          custom_language: cleanedDraft.customLanguage,
+          required_documents: cleanedDraft.requiredDocuments,
+          custom_required_documents: cleanedDraft.customRequiredDocuments,
+          learning_objectives: cleanedDraft.learningObjectives,
+          mentorship_available: cleanedDraft.mentorshipAvailable,
+          mentorship_details: cleanedDraft.mentorshipDetails,
+          project_based: cleanedDraft.projectBased,
+          project_details: cleanedDraft.projectDetails,
+          application_process: cleanedDraft.applicationProcess,
+          interview_process: cleanedDraft.interviewProcess,
+          notification_email: cleanedDraft.notificationEmail,
+          hours_per_week: cleanedDraft.hours_per_week,
         })
         .select()
         .single();

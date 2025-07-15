@@ -229,60 +229,58 @@ const JobDetails: React.FC = () => {
     <div className="min-h-screen bg-[#f1f5f9]">
       {isMobile ? (
         <>
-          {/* Mobile Card - More spacing, gradient apply button, similar jobs outside card, better section spacing */}
+          {/* Mobile Card - Title, Company, then Buttons, then sections in requested order */}
           <div className="w-full max-w-md mx-auto bg-gradient-to-br from-blue-50 via-white to-blue-100 rounded-3xl shadow-2xl p-5 mt-6 mb-10 border border-[#185a9d]">
-            {/* Top: Job Title, Company, and Description */}
-            <section className="mb-8">
-              <div className="flex flex-col items-center gap-2 mb-5">
-                <div className="w-20 h-20 rounded-2xl border-4 border-[#185a9d] shadow-lg bg-white flex items-center justify-center mb-3">
-                  <img src={job.companies?.logo_url || '/placeholder-logo.svg'} alt="Company Logo" className="w-16 h-16 object-cover rounded-xl" />
-                </div>
-                <div className="text-center">
-                  <div className="font-extrabold text-lg text-black drop-shadow-sm mb-2 tracking-wide">{job.title}</div>
-                  <div className="text-xs text-gray-700 font-semibold mb-2">{job.companies?.name}</div>
-                </div>
+            {/* Job Title, Company, Logo */}
+            <div className="flex flex-col items-center gap-2 mb-5">
+              <div className="w-20 h-20 rounded-2xl border-4 border-[#185a9d] shadow-lg bg-white flex items-center justify-center mb-3">
+                <img src={job.companies?.logo_url || '/placeholder-logo.svg'} alt="Company Logo" className="w-16 h-16 object-cover rounded-xl" />
               </div>
-              <div className="text-sm text-gray-600 mb-6 whitespace-pre-line text-center italic">{job.description}</div>
-              <div className="flex items-center justify-center gap-10 mt-6 mb-8">
-                <button
-                  className="flex items-center justify-center w-12 h-12 rounded-full border-2 border-gray-200 bg-white shadow-md transition hover:bg-gray-100 focus:outline-none"
-                  onClick={handleSave}
-                  disabled={saving}
-                  aria-pressed={saved}
-                  aria-label={saved ? 'Unsave job' : 'Save job'}
-                >
-                  {saved ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="#ef4444" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#ef4444" className="w-7 h-7">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.54 0-2.878.792-3.562 2.008C11.566 4.542 10.228 3.75 8.688 3.75 6.099 3.75 4 5.765 4 8.25c0 7.22 8 11.25 8 11.25s8-4.03 8-11.25z" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#9ca3af" className="w-7 h-7">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.54 0-2.878.792-3.562 2.008C11.566 4.542 10.228 3.75 8.688 3.75 6.099 3.75 4 5.765 4 8.25c0 7.22 8 11.25 8 11.25s8-4.03 8-11.25z" />
-                    </svg>
-                  )}
-                </button>
-                <ShareButton
-                  title={job.title}
-                  description={job.description || ''}
-                  url={`${window.location.origin}/jobs/${job.id}`}
-                  type="job"
-                  company={job.companies?.name}
-                  location={typeof job.location === 'object' ? [job.location.city, job.location.area].filter(Boolean).join(', ') : job.location}
-                  className="flex items-center justify-center gap-2 px-8 py-2 rounded-full border-2 border-gray-200 bg-white shadow-md hover:bg-gray-100 transition font-semibold text-gray-700 text-xs h-10 min-w-[80px]"
-                />
-                {hasApplied ? (
-                  <span className="px-5 py-2 rounded-full font-bold text-xs bg-green-100 text-green-700 shadow-md">Applied ✓</span>
+              <div className="text-center">
+                <div className="font-extrabold text-lg text-black drop-shadow-sm mb-2 tracking-wide">{job.title}</div>
+                <div className="text-xs text-gray-700 font-semibold mb-2">{job.companies?.name}</div>
+              </div>
+            </div>
+            {/* Buttons: Apply, Save, Share */}
+            <div className="flex items-center justify-center gap-10 mb-8">
+              <button
+                className="flex items-center justify-center w-12 h-12 rounded-full border-2 border-gray-200 bg-white shadow-md transition hover:bg-gray-100 focus:outline-none"
+                onClick={handleSave}
+                disabled={saving}
+                aria-pressed={saved}
+                aria-label={saved ? 'Unsave job' : 'Save job'}
+              >
+                {saved ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="#ef4444" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#ef4444" className="w-7 h-7">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.54 0-2.878.792-3.562 2.008C11.566 4.542 10.228 3.75 8.688 3.75 6.099 3.75 4 5.765 4 8.25c0 7.22 8 11.25 8 11.25s8-4.03 8-11.25z" />
+                  </svg>
                 ) : (
-                  <button
-                    onClick={handleApply}
-                    disabled={applicationLoading}
-                    className="px-8 py-2 rounded-full font-bold text-xs transition-all duration-300 shadow-md bg-gradient-to-r from-[#185a9d] to-[#1e3a8a] text-white hover:from-[#1e3a8a] hover:to-[#185a9d] hover:scale-105"
-                  >
-                    Apply
-                  </button>
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#9ca3af" className="w-7 h-7">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.54 0-2.878.792-3.562 2.008C11.566 4.542 10.228 3.75 8.688 3.75 6.099 3.75 4 5.765 4 8.25c0 7.22 8 11.25 8 11.25s8-4.03 8-11.25z" />
+                  </svg>
                 )}
-              </div>
-            </section>
+              </button>
+              <ShareButton
+                title={job.title}
+                description={job.description || ''}
+                url={`${window.location.origin}/jobs/${job.id}`}
+                type="job"
+                company={job.companies?.name}
+                location={typeof job.location === 'object' ? [job.location.city, job.location.area].filter(Boolean).join(', ') : job.location}
+                className="flex items-center justify-center gap-2 px-8 py-2 rounded-full border-2 border-gray-200 bg-white shadow-md hover:bg-gray-100 transition font-semibold text-gray-700 text-xs h-10 min-w-[80px]"
+              />
+              {hasApplied ? (
+                <span className="px-5 py-2 rounded-full font-bold text-xs bg-green-100 text-green-700 shadow-md">Applied ✓</span>
+              ) : (
+                <button
+                  onClick={handleApply}
+                  disabled={applicationLoading}
+                  className="px-8 py-2 rounded-full font-bold text-xs transition-all duration-300 shadow-md bg-gradient-to-r from-[#185a9d] to-[#1e3a8a] text-white hover:from-[#1e3a8a] hover:to-[#185a9d] hover:scale-105"
+                >
+                  Apply
+                </button>
+              )}
+            </div>
             {/* Role Highlights */}
             <section className="mb-8">
               <h2 className="text-base font-bold text-black mb-4">Role Highlights</h2>
@@ -291,6 +289,21 @@ const JobDetails: React.FC = () => {
                   ? parseRequirements(job.requirements).map((item, index) => <li key={index}>{item}</li>)
                   : <li className="text-gray-400">No highlights listed.</li>}
               </ul>
+            </section>
+            {/* Salary Section */}
+            <section className="mb-8">
+              <h2 className="text-base font-bold text-black mb-4">Salary</h2>
+              <div className="text-sm text-gray-800 font-semibold mb-2">
+                {(() => {
+                  if (typeof job.min_amount === 'number' && typeof job.max_amount === 'number' && job.min_amount && job.max_amount) {
+                    return `₹${job.min_amount.toLocaleString()} - ₹${job.max_amount.toLocaleString()}${job.pay_rate ? ' / ' + job.pay_rate : ''}`;
+                  } else if (typeof job.amount === 'number' && job.amount) {
+                    return `₹${job.amount.toLocaleString()}${job.pay_rate ? ' / ' + job.pay_rate : ''}`;
+                  } else {
+                    return 'Salary not specified';
+                  }
+                })()}
+              </div>
             </section>
             {/* Key Skills */}
             <section className="mb-8">
@@ -317,6 +330,11 @@ const JobDetails: React.FC = () => {
               {job.planned_start_date && (
                 <div className="text-gray-600 mb-3 text-sm"><b>Planned Start Date:</b> {new Date(job.planned_start_date).toLocaleDateString()}</div>
               )}
+            </section>
+            {/* Description Section */}
+            <section className="mb-8">
+              <h2 className="text-base font-bold text-black mb-4">Description</h2>
+              <div className="text-sm text-gray-600 mb-6 whitespace-pre-line text-center italic">{job.description}</div>
             </section>
             {/* Benefits & Perks */}
             {(job.benefits && job.benefits.length > 0) && (

@@ -58,6 +58,25 @@ interface DraftManagerProps {
   currentStep: number;
 }
 
+function cleanNumericFields(draft: any) {
+  const numericFields = [
+    'min_pay',
+    'max_pay',
+    'openings',
+    'applicants',
+    'max_age',
+    'min_age',
+    'number_of_hires',
+    'minimum_experience',
+    // add any other numeric fields used in job_drafts
+  ];
+  const cleaned = { ...draft };
+  for (const field of numericFields) {
+    if (cleaned[field] === "") cleaned[field] = null;
+  }
+  return cleaned;
+}
+
 const DraftManager: React.FC<DraftManagerProps> = ({
   isOpen,
   onClose,
@@ -112,50 +131,61 @@ const DraftManager: React.FC<DraftManagerProps> = ({
         return;
       }
 
+      // Get current user ID
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      if (!userId) {
+        alert('You must be logged in to save drafts.');
+        setSaving(false);
+        return;
+      }
+
+      const draftToSave = {
+        draft_name: name,
+        current_step: currentStep,
+        is_complete: false,
+        user_id: userId,
+        job_title: currentFormData.jobTitle,
+        job_title_description: currentFormData.jobTitleDescription,
+        job_type: currentFormData.jobType,
+        city: currentFormData.city,
+        area: currentFormData.area,
+        pincode: currentFormData.pincode,
+        street_address: currentFormData.streetAddress,
+        employment_types: currentFormData.employmentTypes,
+        schedules: currentFormData.schedules,
+        custom_schedule: currentFormData.customSchedule,
+        has_planned_start_date: currentFormData.hasPlannedStartDate,
+        planned_start_date: currentFormData.plannedStartDate === '' ? null : currentFormData.plannedStartDate,
+        number_of_hires: currentFormData.numberOfHires,
+        custom_number_of_hires: currentFormData.customNumberOfHires,
+        recruitment_timeline: currentFormData.recruitmentTimeline,
+        pay_type: currentFormData.payType,
+        min_pay: currentFormData.minPay,
+        max_pay: currentFormData.maxPay,
+        pay_rate: currentFormData.payRate,
+        supplemental_pay: currentFormData.supplementalPay,
+        custom_supplemental_pay: currentFormData.customSupplementalPay,
+        benefits: currentFormData.benefits,
+        custom_benefits: currentFormData.customBenefits,
+        education: currentFormData.education,
+        language: currentFormData.language,
+        custom_language: currentFormData.customLanguage,
+        experience: currentFormData.experience,
+        industries: currentFormData.industries,
+        custom_industry: currentFormData.customIndustry,
+        age: currentFormData.age,
+        gender: currentFormData.gender,
+        skills: currentFormData.skills,
+        custom_skills: currentFormData.customSkills,
+        job_profile_description: currentFormData.jobProfileDescription,
+        notification_emails: currentFormData.notificationEmails,
+        application_deadline: currentFormData.applicationDeadline === '' ? null : currentFormData.applicationDeadline,
+      };
+      const cleanedDraft = cleanNumericFields(draftToSave);
       const { data, error } = await supabase
         .from('job_drafts')
-        .insert({
-          draft_name: name,
-          current_step: currentStep,
-          is_complete: false,
-          // Map form data to database fields
-          job_title: currentFormData.jobTitle,
-          job_title_description: currentFormData.jobTitleDescription,
-          job_type: currentFormData.jobType,
-          city: currentFormData.city,
-          area: currentFormData.area,
-          pincode: currentFormData.pincode,
-          street_address: currentFormData.streetAddress,
-          employment_types: currentFormData.employmentTypes,
-          schedules: currentFormData.schedules,
-          custom_schedule: currentFormData.customSchedule,
-          has_planned_start_date: currentFormData.hasPlannedStartDate,
-          planned_start_date: currentFormData.plannedStartDate,
-          number_of_hires: currentFormData.numberOfHires,
-          custom_number_of_hires: currentFormData.customNumberOfHires,
-          recruitment_timeline: currentFormData.recruitmentTimeline,
-          pay_type: currentFormData.payType,
-          min_pay: currentFormData.minPay,
-          max_pay: currentFormData.maxPay,
-          pay_rate: currentFormData.payRate,
-          supplemental_pay: currentFormData.supplementalPay,
-          custom_supplemental_pay: currentFormData.customSupplementalPay,
-          benefits: currentFormData.benefits,
-          custom_benefits: currentFormData.customBenefits,
-          education: currentFormData.education,
-          language: currentFormData.language,
-          custom_language: currentFormData.customLanguage,
-          experience: currentFormData.experience,
-          industries: currentFormData.industries,
-          custom_industry: currentFormData.customIndustry,
-          age: currentFormData.age,
-          gender: currentFormData.gender,
-          skills: currentFormData.skills,
-          custom_skills: currentFormData.customSkills,
-          job_profile_description: currentFormData.jobProfileDescription,
-          notification_emails: currentFormData.notificationEmails,
-          application_deadline: currentFormData.applicationDeadline,
-        })
+        .insert(cleanedDraft)
         .select()
         .single();
 

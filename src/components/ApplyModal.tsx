@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import Modal from './Modal';
 import { supabase } from '../config/supabase';
+import { AuthContext } from '../contexts/AuthContext';
 
 interface ApplyModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ const ApplyModal: React.FC<ApplyModalProps> = ({
   existingResumeUrl,
   existingVideoUrl,
 }) => {
+  const { user } = useContext(AuthContext);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [resumeUrl, setResumeUrl] = useState<string | null>(existingResumeUrl || null);
@@ -44,12 +46,13 @@ const ApplyModal: React.FC<ApplyModalProps> = ({
     }
   };
 
-  const uploadFile = async (file: File, folder: string): Promise<string> => {
+  const uploadFile = async (file: File, user: any, type: 'resume' | 'video'): Promise<string> => {
     const ext = file.name.split('.').pop();
-    const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
-    const { data, error } = await supabase.storage.from('uploads').upload(fileName, file, { upsert: true });
+    const bucket = type === 'video' ? 'job-seeker-intro-videos' : 'job-seeker-resumes';
+    const fileName = `${user.id}/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+    const { data, error } = await supabase.storage.from(bucket).upload(fileName, file, { upsert: true });
     if (error) throw error;
-    const { publicUrl } = supabase.storage.from('uploads').getPublicUrl(fileName).data;
+    const { publicUrl } = supabase.storage.from(bucket).getPublicUrl(fileName).data;
     return publicUrl;
   };
 
@@ -60,11 +63,11 @@ const ApplyModal: React.FC<ApplyModalProps> = ({
       let finalResumeUrl = resumeUrl;
       let finalVideoUrl = videoUrl;
       if (resumeFile) {
-        finalResumeUrl = await uploadFile(resumeFile, 'resumes');
+        finalResumeUrl = await uploadFile(resumeFile, user, 'resume');
         setResumeUrl(finalResumeUrl);
       }
       if (videoFile) {
-        finalVideoUrl = await uploadFile(videoFile, 'videos');
+        finalVideoUrl = await uploadFile(videoFile, user, 'video');
         setVideoUrl(finalVideoUrl);
       }
       if (resumeRequired && !finalResumeUrl) {

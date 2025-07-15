@@ -104,6 +104,26 @@ const CompanyDetailsForm: React.FC = () => {
       }
 
       toast.success('Company profile saved successfully! Welcome to Selectz Employer Portal!');
+      // Add 'employer' to roles if not present
+      try {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('roles')
+          .eq('auth_id', user?.id)
+          .single();
+        if (!profileError && profileData) {
+          let roles = profileData.roles || [];
+          if (!roles.includes('employer')) {
+            roles = [...roles, 'employer'];
+            await supabase
+              .from('profiles')
+              .update({ roles })
+              .eq('auth_id', user?.id);
+          }
+        }
+      } catch (err) {
+        console.error('Error updating roles after company profile:', err);
+      }
       navigate('/employer/dashboard');
     } catch (err) {
       console.error('Error in handleSubmit:', err);

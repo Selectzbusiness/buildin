@@ -22,6 +22,7 @@ interface PaymentRequest {
   payment_type: 'job_posting' | 'credits'
   credits_amount?: number
   job_id?: string
+  is_free?: boolean
 }
 
 interface RazorpayOrder {
@@ -38,6 +39,18 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  let body: any = {};
+  try {
+    body = await req.json();
+    console.log('Received body:', body);
+  } catch (e) {
+    console.error('Failed to parse JSON body:', e);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Invalid JSON body' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+    );
+  }
+
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -49,10 +62,54 @@ serve(async (req) => {
       }
     )
 
-    const { amount, currency, description, user_id, payment_type, credits_amount, job_id }: PaymentRequest = await req.json()
+    const { amount, currency, description, user_id, payment_type, credits_amount, job_id, is_free } = body;
 
     // Validate request
-    if (!amount || !currency || !description || !user_id || !payment_type) {
+    if (!currency || !description || !user_id || !payment_type) {
+      console.error('Missing required fields. Body:', body);
+      throw new Error('Missing required fields');
+    }
+
+    // Handle free payment (no Razorpay)
+    if (is_free) {
+      // Log the payload for debugging
+      console.log('Free payment payload:', { user_id, currency, description, payment_type });
+      // Validate user_id
+      if (!user_id || typeof user_id !== 'string' || user_id.length < 10) {
+        throw new Error('Invalid or missing user_id for free payment');
+      }
+      const { error: dbError } = await supabaseClient
+        .from('payment_intents')
+        .insert({
+          razorpay_order_id: null,
+          user_id,
+          amount: 0,
+          currency,
+          description,
+          payment_type,
+          credits_amount,
+          job_id,
+          status: 'success',
+          created_at: new Date().toISOString(),
+          is_free: true,
+        })
+
+      if (dbError) {
+        console.error('Supabase insert error:', dbError)
+        throw new Error(`Database error: ${dbError.message}`)
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, free: true }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      )
+    }
+
+    // Validate paid payment
+    if (!amount) {
       throw new Error('Missing required fields')
     }
 
@@ -75,7 +132,7 @@ serve(async (req) => {
       }
     }
 
-    const order: RazorpayOrder = await razorpay.orders.create(orderData)
+    const order: RazorpayOrder = await (await razorpay.orders()).create(orderData)
 
     // Store payment intent in database
     const { error: dbError } = await supabaseClient
@@ -91,6 +148,7 @@ serve(async (req) => {
         job_id: job_id,
         status: 'pending',
         created_at: new Date().toISOString(),
+        is_free: false,
       })
 
     if (dbError) {

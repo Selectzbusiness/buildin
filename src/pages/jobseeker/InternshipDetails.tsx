@@ -58,11 +58,12 @@ function normalizeListField(field: any): string[] {
 // Fix stipend display helper
 function formatStipend(stipend: any): string {
   if (!stipend) return 'Not specified';
-  if (typeof stipend === 'string') return `₹${stipend}`;
+  if (typeof stipend === 'string') return stipend === 'Unpaid' ? 'Unpaid' : `₹${stipend}`;
   if (typeof stipend === 'object') {
-    if (stipend.min && stipend.max) return `₹${stipend.min} - ₹${stipend.max}${stipend.frequency ? ' / ' + stipend.frequency : ''}`;
-    if (stipend.amount) return `₹${stipend.amount}${stipend.frequency ? ' / ' + stipend.frequency : ''}`;
-    return JSON.stringify(stipend);
+    if (stipend.type && stipend.type.toLowerCase() === 'unpaid') return 'Unpaid';
+    if (stipend.amount && stipend.frequency) return `₹${stipend.amount} / ${stipend.frequency}`;
+    if (stipend.amount) return `₹${stipend.amount}`;
+    return 'Not specified';
   }
   return 'Not specified';
 }
@@ -215,60 +216,58 @@ const InternshipDetails: React.FC = () => {
     <div className="min-h-screen bg-[#f1f5f9]">
       {isMobile ? (
         <>
-          {/* Mobile Card - More spacing, gradient apply button, similar internships outside card, better section spacing */}
+          {/* Mobile Card - Title, Company, then Buttons, then sections in requested order */}
           <div className="w-full max-w-md mx-auto bg-gradient-to-br from-blue-50 via-white to-blue-100 rounded-3xl shadow-2xl p-5 mt-6 mb-10 border border-[#185a9d]">
-            {/* Top: Internship Title, Company, and Description */}
-            <section className="mb-8">
-              <div className="flex flex-col items-center gap-2 mb-5">
-                <div className="w-20 h-20 rounded-2xl border-4 border-[#185a9d] shadow-lg bg-white flex items-center justify-center mb-3">
-                  <img src={companyLogo} alt="Company Logo" className="w-16 h-16 object-cover rounded-xl" />
-                </div>
-                <div className="text-center">
-                  <div className="font-extrabold text-lg text-black drop-shadow-sm mb-2 tracking-wide">{internship.title}</div>
-                  <div className="text-xs text-gray-700 font-semibold mb-2">{internship.companies?.name || 'Company Name'}</div>
-                </div>
+            {/* Internship Title, Company, Logo */}
+            <div className="flex flex-col items-center gap-2 mb-5">
+              <div className="w-20 h-20 rounded-2xl border-4 border-[#185a9d] shadow-lg bg-white flex items-center justify-center mb-3">
+                <img src={companyLogo} alt="Company Logo" className="w-16 h-16 object-cover rounded-xl" />
               </div>
-              <div className="text-sm text-gray-600 mb-6 whitespace-pre-line text-center italic">{internship.description}</div>
-              <div className="flex items-center justify-center gap-10 mt-6 mb-8">
-                <button
-                  className="flex items-center justify-center w-12 h-12 rounded-full border-2 border-gray-200 bg-white shadow-md transition hover:bg-gray-100 focus:outline-none"
-                  onClick={handleSave}
-                  disabled={saving}
-                  aria-pressed={saved}
-                  aria-label={saved ? 'Unsave internship' : 'Save internship'}
-                >
-                  {saved ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="#ef4444" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#ef4444" className="w-7 h-7">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.54 0-2.878.792-3.562 2.008C11.566 4.542 10.228 3.75 8.688 3.75 6.099 3.75 4 5.765 4 8.25c0 7.22 8 11.25 8 11.25s8-4.03 8-11.25z" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#9ca3af" className="w-7 h-7">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.54 0-2.878.792-3.562 2.008C11.566 4.542 10.228 3.75 8.688 3.75 6.099 3.75 4 5.765 4 8.25c0 7.22 8 11.25 8 11.25s8-4.03 8-11.25z" />
-                    </svg>
-                  )}
-                </button>
-                <ShareButton
-                  title={internship.title}
-                  description={internship.description}
-                  url={`${window.location.origin}/internships/${internship.id}`}
-                  type="internship"
-                  company={internship.companies?.name || 'Company Name'}
-                  location={internship.location ? (typeof internship.location === 'object' && internship.location !== null ? [(internship.location as any).city, (internship.location as any).area].filter(Boolean).join(', ') : internship.location) : 'Not specified'}
-                  className="flex items-center justify-center gap-2 px-8 py-2 rounded-full border-2 border-gray-200 bg-white shadow-md hover:bg-gray-100 transition font-semibold text-gray-700 text-xs h-10 min-w-[80px]"
-                />
-                {hasApplied ? (
-                  <span className="px-5 py-2 rounded-full font-bold text-xs bg-green-100 text-green-700 shadow-md">Applied ✓</span>
+              <div className="text-center">
+                <div className="font-extrabold text-lg text-black drop-shadow-sm mb-2 tracking-wide">{internship.title}</div>
+                <div className="text-xs text-gray-700 font-semibold mb-2">{internship.companies?.name || 'Company Name'}</div>
+              </div>
+            </div>
+            {/* Buttons: Apply, Save, Share */}
+            <div className="flex items-center justify-center gap-10 mb-8">
+              <button
+                className="flex items-center justify-center w-12 h-12 rounded-full border-2 border-gray-200 bg-white shadow-md transition hover:bg-gray-100 focus:outline-none"
+                onClick={handleSave}
+                disabled={saving}
+                aria-pressed={saved}
+                aria-label={saved ? 'Unsave internship' : 'Save internship'}
+              >
+                {saved ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="#ef4444" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#ef4444" className="w-7 h-7">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.54 0-2.878.792-3.562 2.008C11.566 4.542 10.228 3.75 8.688 3.75 6.099 3.75 4 5.765 4 8.25c0 7.22 8 11.25 8 11.25s8-4.03 8-11.25z" />
+                  </svg>
                 ) : (
-                  <button
-                    onClick={handleApply}
-                    disabled={applicationLoading}
-                    className="px-8 py-2 rounded-full font-bold text-xs transition-all duration-300 shadow-md bg-gradient-to-r from-[#185a9d] to-[#1e3a8a] text-white hover:from-[#1e3a8a] hover:to-[#185a9d] hover:scale-105"
-                  >
-                    Apply
-                  </button>
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#9ca3af" className="w-7 h-7">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.54 0-2.878.792-3.562 2.008C11.566 4.542 10.228 3.75 8.688 3.75 6.099 3.75 4 5.765 4 8.25c0 7.22 8 11.25 8 11.25s8-4.03 8-11.25z" />
+                  </svg>
                 )}
-              </div>
-            </section>
+              </button>
+              <ShareButton
+                title={internship.title}
+                description={internship.description}
+                url={`${window.location.origin}/internships/${internship.id}`}
+                type="internship"
+                company={internship.companies?.name || 'Company Name'}
+                location={internship.location ? (typeof internship.location === 'object' && internship.location !== null ? [(internship.location as any).city, (internship.location as any).area].filter(Boolean).join(', ') : internship.location) : 'Not specified'}
+                className="flex items-center justify-center gap-2 px-8 py-2 rounded-full border-2 border-gray-200 bg-white shadow-md hover:bg-gray-100 transition font-semibold text-gray-700 text-xs h-10 min-w-[80px]"
+              />
+              {hasApplied ? (
+                <span className="px-5 py-2 rounded-full font-bold text-xs bg-green-100 text-green-700 shadow-md">Applied ✓</span>
+              ) : (
+                <button
+                  onClick={handleApply}
+                  disabled={applicationLoading}
+                  className="px-8 py-2 rounded-full font-bold text-xs transition-all duration-300 shadow-md bg-gradient-to-r from-[#185a9d] to-[#1e3a8a] text-white hover:from-[#1e3a8a] hover:to-[#185a9d] hover:scale-105"
+                >
+                  Apply
+                </button>
+              )}
+            </div>
             {/* Role Highlights */}
             <section className="mb-8">
               <h2 className="text-base font-bold text-black mb-4">Role Highlights</h2>
@@ -277,6 +276,13 @@ const InternshipDetails: React.FC = () => {
                   ? normalizeListField(internship.requirements).map((item, index) => <li key={index}>{item}</li>)
                   : <li className="text-gray-400">No highlights listed.</li>}
               </ul>
+            </section>
+            {/* Stipend Section */}
+            <section className="mb-8">
+              <h2 className="text-base font-bold text-black mb-4">Stipend</h2>
+              <div className="text-sm text-gray-800 font-semibold mb-2">
+                {formatStipend(internship.stipend)}
+              </div>
             </section>
             {/* Key Skills */}
             <section className="mb-8">
@@ -297,12 +303,11 @@ const InternshipDetails: React.FC = () => {
               {internship.application_deadline && (
                 <div className="text-gray-600 mb-3 text-sm"><b>Application Deadline:</b> {new Date(internship.application_deadline).toLocaleDateString()}</div>
               )}
-              {internship.start_date && (
-                <div className="text-gray-600 mb-3 text-sm"><b>Start Date:</b> {new Date(internship.start_date).toLocaleDateString()}</div>
-              )}
-              {internship.end_date && (
-                <div className="text-gray-600 mb-3 text-sm"><b>End Date:</b> {new Date(internship.end_date).toLocaleDateString()}</div>
-              )}
+            </section>
+            {/* Description Section */}
+            <section className="mb-8">
+              <h2 className="text-base font-bold text-black mb-4">Description</h2>
+              <div className="text-sm text-gray-600 mb-6 whitespace-pre-line text-center italic">{internship.description}</div>
             </section>
             {/* Responsibilities */}
             {internship.responsibilities && internship.responsibilities.length > 0 && (

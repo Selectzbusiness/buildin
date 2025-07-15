@@ -15,7 +15,7 @@ const MainLayout: React.FC = () => {
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { user, profile } = useContext(AuthContext);
+  const { user, profile, setUser, setProfile } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 640);
@@ -40,9 +40,15 @@ const MainLayout: React.FC = () => {
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/login');
-    setIsDropdownOpen(false);
+    try {
+      await supabase.auth.signOut();
+      navigate('/login');
+      setUser(null);
+      setProfile(null);
+      setIsDropdownOpen(false);
+    } catch (err) {
+      alert('Failed to sign out');
+    }
   };
 
   const handlePostJobsClick = () => {

@@ -48,6 +48,9 @@ interface Draft {
   job_profile_description?: string;
   notification_emails?: string;
   application_deadline?: string;
+  disclaimer?: string;
+  application_type?: 'in_app' | 'external_link';
+  application_link?: string;
 }
 
 interface DraftManagerProps {
@@ -181,6 +184,9 @@ const DraftManager: React.FC<DraftManagerProps> = ({
         job_profile_description: currentFormData.jobProfileDescription,
         notification_emails: currentFormData.notificationEmails,
         application_deadline: currentFormData.applicationDeadline === '' ? null : currentFormData.applicationDeadline,
+        disclaimer: currentFormData.disclaimer,
+        application_type: currentFormData.applicationType,
+        application_link: currentFormData.applicationLink,
       };
       const cleanedDraft = cleanNumericFields(draftToSave);
       const { data, error } = await supabase
@@ -265,6 +271,9 @@ const DraftManager: React.FC<DraftManagerProps> = ({
       jobProfileDescription: draft.job_profile_description || '',
       notificationEmails: draft.notification_emails || '',
       applicationDeadline: draft.application_deadline || '',
+      disclaimer: draft.disclaimer || '',
+      applicationType: draft.application_type || 'in_app',
+      applicationLink: draft.application_link || '',
     };
 
     onLoadDraft({ ...draft, ...formData });

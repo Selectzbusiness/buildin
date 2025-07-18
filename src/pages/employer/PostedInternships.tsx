@@ -50,24 +50,25 @@ const PostedInternships: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data: companyData, error: companyError } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('auth_id', userId)
-        .single();
-
-      if (companyError) throw new Error("Could not find employer's company.");
-      if (!companyData) {
+      // Fetch all company_ids for this user from employer_companies
+      const { data: links, error: linkError } = await supabase
+        .from('employer_companies')
+        .select('company_id')
+        .eq('user_id', userId);
+      if (linkError) throw linkError;
+      const companyIds = (links || []).map((l: any) => l.company_id);
+      if (companyIds.length === 0) {
         setInternships([]);
+        setLoading(false);
+        setError('No company found for your account. Please create a company profile.');
         return;
       }
-
+      // Fetch internships for all companies
       const { data, error } = await supabase
         .from('internships')
-        .select(`id, title, location, type, status, created_at`)
-        .eq('company_id', companyData.id)
+        .select('id, title, location, type, status, created_at')
+        .in('company_id', companyIds)
         .order('created_at', { ascending: false });
-
       if (error) throw error;
       setInternships(data as Internship[]);
     } catch (err: any) {

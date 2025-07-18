@@ -49,35 +49,26 @@ const PostedJobs: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data: companies, error: companyError } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('auth_id', userId);
-      const companyData = companies && companies.length > 0 ? companies[0] : null;
-      console.log('companyData', companyData, 'companyError', companyError);
-      if (companyError) throw new Error("Could not find employer's company. " + (companyError.message || JSON.stringify(companyError)));
-      if (!companyData) {
+      // Fetch all company_ids for this user from employer_companies
+      const { data: links, error: linkError } = await supabase
+        .from('employer_companies')
+        .select('company_id')
+        .eq('user_id', userId);
+      if (linkError) throw linkError;
+      const companyIds = (links || []).map((l: any) => l.company_id);
+      if (companyIds.length === 0) {
         setJobs([]);
+        setLoading(false);
         setError('No company found for your account. Please create a company profile.');
         return;
       }
+      // Fetch jobs for all companies
       const { data, error } = await supabase
         .from('jobs')
-        .select(`
-          id,
-          title,
-          location,
-          job_type,
-          status,
-          created_at,
-          applications (
-            count
-          )
-        `)
-        .eq('company_id', companyData.id)
+        .select('id, title, location, job_type, status, created_at, applications (count)')
+        .in('company_id', companyIds)
         .order('created_at', { ascending: false });
-      console.log('jobs data', data, 'jobs error', error);
-      if (error) throw new Error(error.message || JSON.stringify(error));
+      if (error) throw error;
       setJobs(data as Job[]);
     } catch (err: any) {
       console.error('Error fetching jobs:', err);

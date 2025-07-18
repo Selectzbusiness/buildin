@@ -69,12 +69,28 @@ const AuthCallback: React.FC = () => {
 
           if (userProfile?.roles?.includes('employer')) {
             // Check if they have company details
-            const { data: companyData } = await supabase
-              .from('companies')
-              .select('*')
-              .eq('auth_id', session.user.id)
-              .maybeSingle();
-            
+            const { data: links, error: linkError } = await supabase
+              .from('employer_companies')
+              .select('company_id')
+              .eq('user_id', session.user.id);
+            if (linkError) {
+              navigate('/employer/company-details');
+              return;
+            }
+            const companyIds = (links || []).map((l: any) => l.company_id);
+            let companyData = null;
+            if (companyIds.length > 0) {
+              const { data: companies, error: companiesError } = await supabase
+                .from('companies')
+                .select('*')
+                .in('id', companyIds)
+                .maybeSingle();
+              if (companiesError) {
+                navigate('/employer/company-details');
+                return;
+              }
+              companyData = companies;
+            }
             if (companyData) {
               navigate('/employer/dashboard');
             } else {

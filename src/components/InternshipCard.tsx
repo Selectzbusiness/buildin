@@ -31,6 +31,9 @@ interface Internship {
   company?: string;
   companyLogo?: string;
   skills?: string[];
+  application_type?: 'in_app' | 'external_link';
+  application_link?: string;
+  disclaimer?: string;
 }
 
 interface InternshipCardProps {
@@ -215,6 +218,11 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
       </div>
       {/* Description */}
       <div className="mt-2 text-sm text-gray-500 line-clamp-2">{internship.description}</div>
+      {internship?.application_type === 'external_link' && internship?.disclaimer && (
+        <div className="mt-2 text-xs text-gray-500">
+          <strong>Note:</strong> {internship.disclaimer}
+        </div>
+      )}
       <div style={{ flex: 1, minHeight: 12 }} />
       {/* No Apply button here; spacing balanced for clean look */}
     </div>

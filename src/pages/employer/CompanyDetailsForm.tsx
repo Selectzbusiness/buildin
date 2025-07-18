@@ -37,33 +37,7 @@ const CompanyDetailsForm: React.FC = () => {
       navigate('/login');
       return;
     }
-
-    try {
-      const { data, error } = await supabase
-        .from('companies')
-        .select('*')
-        .eq('auth_id', user.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error checking company profile:', error);
-        setLoading(false);
-        return;
-      }
-
-      if (data) {
-        // Company profile exists, redirect to dashboard
-        toast.success('Company profile found! Redirecting to dashboard...');
-        navigate('/employer/dashboard');
-        return;
-      }
-
-      // No company profile found, show the form
-      setLoading(false);
-    } catch (err) {
-      console.error('Error in checkCompanyProfile:', err);
-      setLoading(false);
-    }
+    setLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,24 +58,28 @@ const CompanyDetailsForm: React.FC = () => {
         return;
       }
 
-      const { error: insertError } = await supabase
+      const { data: company, error: insertError } = await supabase
         .from('companies')
         .insert([{
-          auth_id: user?.id,
           name: companyInfo.name.trim(),
           industry: companyInfo.industry,
           size: companyInfo.size,
           location: companyInfo.location,
           website: companyInfo.website,
           description: companyInfo.description
-        }]);
-
+        }])
+        .select()
+        .single();
       if (insertError) {
         console.error('Error saving company profile:', insertError);
         setError('Failed to save company profile. Please try again.');
         setSaving(false);
         return;
       }
+      // Link this company to the user in employer_companies
+      await supabase
+        .from('employer_companies')
+        .insert([{ user_id: user?.id, company_id: company.id }]);
 
       toast.success('Company profile saved successfully! Welcome to Selectz Employer Portal!');
       // Add 'employer' to roles if not present
@@ -109,7 +87,7 @@ const CompanyDetailsForm: React.FC = () => {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('roles')
-          .eq('auth_id', user?.id)
+          .eq('id', user?.id)
           .single();
         if (!profileError && profileData) {
           let roles = profileData.roles || [];
@@ -118,7 +96,7 @@ const CompanyDetailsForm: React.FC = () => {
             await supabase
               .from('profiles')
               .update({ roles })
-              .eq('auth_id', user?.id);
+              .eq('id', user?.id);
           }
         }
       } catch (err) {

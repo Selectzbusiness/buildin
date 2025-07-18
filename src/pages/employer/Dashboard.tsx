@@ -33,25 +33,23 @@ const EmployerDashboard: React.FC = () => {
     if (!user) return;
 
     const fetchStatsAndApplications = async () => {
-      // 1. Get the employer's company
-      const { data: company, error: companyError } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('auth_id', user.id)
-        .single();
-
-      if (companyError || !company) return;
-
-      // 2. Get jobs and internships for this company
+      // 1. Get all company_ids for this user from employer_companies
+      const { data: links, error: linkError } = await supabase
+        .from('employer_companies')
+        .select('company_id')
+        .eq('user_id', user.id);
+      if (linkError) return;
+      const companyIds = (links || []).map((l: any) => l.company_id);
+      if (companyIds.length === 0) return;
+      // 2. Get jobs and internships for these companies
       const { data: jobs } = await supabase
         .from('jobs')
         .select('id')
-        .eq('company_id', company.id);
-
+        .in('company_id', companyIds);
       const { data: internships } = await supabase
         .from('internships')
         .select('id')
-        .eq('company_id', company.id);
+        .in('company_id', companyIds);
 
       const jobIds = jobs?.map(job => job.id) || [];
       const internshipIds = internships?.map(internship => internship.id) || [];

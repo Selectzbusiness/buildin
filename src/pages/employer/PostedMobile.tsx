@@ -33,12 +33,18 @@ const PostedMobile: React.FC = () => {
     try {
       // Fetch company id
       const userId = profile.auth_id || profile.user_id;
-      const { data: companies } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('auth_id', userId);
-      const companyId = companies && companies.length > 0 ? companies[0].id : null;
-      if (!companyId) {
+      const { data: links, error: linkError } = await supabase
+        .from('employer_companies')
+        .select('company_id')
+        .eq('user_id', userId);
+      if (linkError) {
+        setPostedJobs([]);
+        setPostedInternships([]);
+        setLoading(false);
+        return;
+      }
+      const companyIds = (links || []).map((l: any) => l.company_id);
+      if (companyIds.length === 0) {
         setPostedJobs([]);
         setPostedInternships([]);
         setLoading(false);
@@ -48,14 +54,14 @@ const PostedMobile: React.FC = () => {
       const { data: jobs } = await supabase
         .from('jobs')
         .select('id, title, location, job_type, status, created_at')
-        .eq('company_id', companyId)
+        .in('company_id', companyIds)
         .order('created_at', { ascending: false });
       setPostedJobs(jobs || []);
       // Fetch internships
       const { data: internships } = await supabase
         .from('internships')
         .select('id, title, location, type, status, created_at')
-        .eq('company_id', companyId)
+        .in('company_id', companyIds)
         .order('created_at', { ascending: false });
       setPostedInternships(internships || []);
     } catch (err) {

@@ -30,17 +30,22 @@ const EmployerLayout: React.FC = () => {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('companies')
-          .select('id')
-          .eq('auth_id', user.id)
-          .maybeSingle();
-
-        if (error || !data) {
+        const { data: links, error: linkError } = await supabase
+          .from('employer_companies')
+          .select('company_id')
+          .eq('user_id', user.id);
+        if (linkError) {
           toast('Please complete your company profile to access employer features.');
           navigate('/employer/company-details');
           return;
         }
+        const companyIds = (links || []).map((l: any) => l.company_id);
+        if (companyIds.length === 0) {
+          toast('Please complete your company profile to access employer features.');
+          navigate('/employer/company-details');
+          return;
+        }
+        // Optionally, check if company exists in companies table
       } catch (err) {
         console.error('Error checking company profile:', err);
         toast('Error checking company profile. Please try again.');

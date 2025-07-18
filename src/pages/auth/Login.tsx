@@ -1,8 +1,10 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../config/supabase';
 import { AuthContext } from '../../contexts/AuthContext';
 import { App as CapApp } from '@capacitor/app';
+import Modal from '../../components/Modal';
+import ForgotPassword from './ForgotPassword';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -17,7 +19,7 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
 
   useEffect(() => {
@@ -47,15 +49,32 @@ const Login: React.FC = () => {
           const { data: profileData } = await supabase
             .from('profiles')
             .select('roles')
-            .eq('auth_id', data.session.user.id)
+            .eq('id', data.session.user.id)
             .single();
           if (profileData?.roles?.includes('employer')) {
             // Check if they have company details
-            const { data: companyData } = await supabase
-              .from('companies')
-              .select('*')
-              .eq('auth_id', data.session.user.id)
-              .maybeSingle();
+            const { data: links, error: linkError } = await supabase
+              .from('employer_companies')
+              .select('company_id')
+              .eq('user_id', data.session.user.id);
+            if (linkError) {
+              navigate('/employer/company-details');
+              return;
+            }
+            const companyIds = (links || []).map((l: any) => l.company_id);
+            let companyData = null;
+            if (companyIds.length > 0) {
+              const { data: companies, error: companiesError } = await supabase
+                .from('companies')
+                .select('*')
+                .in('id', companyIds)
+                .maybeSingle();
+              if (companiesError) {
+                navigate('/employer/company-details');
+                return;
+              }
+              companyData = companies;
+            }
             if (companyData) {
               navigate('/employer/dashboard');
             } else {
@@ -268,17 +287,32 @@ const Login: React.FC = () => {
       if (formData.role === 'employer') {
         // Check if employer already has company details
         try {
-          const { data: companyData, error: companyError } = await supabase
-            .from('companies')
-            .select('*')
-            .eq('auth_id', loginData.user.id)
-            .maybeSingle();
+          const { data: links, error: linkError } = await supabase
+            .from('employer_companies')
+            .select('company_id')
+            .eq('user_id', loginData.user.id);
 
-          if (companyError) {
-            console.error('Error checking company profile:', companyError);
+          if (linkError) {
+            console.error('Error checking company profile:', linkError);
             // If error checking, redirect to company details form
             navigate('/employer/company-details');
             return;
+          }
+
+          const companyIds = (links || []).map((l: any) => l.company_id);
+          let companyData = null;
+          if (companyIds.length > 0) {
+            const { data: companies, error: companiesError } = await supabase
+              .from('companies')
+              .select('*')
+              .in('id', companyIds)
+              .maybeSingle();
+            if (companiesError) {
+              console.error('Error fetching company profile:', companiesError);
+              navigate('/employer/company-details');
+              return;
+            }
+            companyData = companies;
           }
 
           if (companyData) {
@@ -537,14 +571,25 @@ const Login: React.FC = () => {
                 </a>
               </p>
               <p className="text-sm text-gray-600">
-                <a href="/forgot-password" className="font-semibold text-[#185a9d] hover:text-[#134a82] transition-colors duration-200">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPasswordModal(true)}
+                  className="font-semibold text-[#185a9d] hover:text-[#134a82] transition-colors duration-200 bg-transparent border-none outline-none cursor-pointer"
+                >
                   Forgot your password?
-                </a>
+                </button>
               </p>
             </div>
           </form>
         </div>
       </div>
+      <Modal
+        isOpen={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+        title="Forgot Password"
+      >
+        <ForgotPassword />
+      </Modal>
     </div>
   );
 };

@@ -54,6 +54,7 @@ interface InternshipDraft {
   application_process?: string;
   interview_process?: string;
   notification_email?: string;
+  disclaimer?: string;
 }
 
 interface InternshipDraftManagerProps {

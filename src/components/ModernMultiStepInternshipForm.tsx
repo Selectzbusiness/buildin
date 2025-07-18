@@ -6,6 +6,7 @@ import { supabase } from '../config/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import InternshipDraftManager from './InternshipDraftManager';
 import toast from 'react-hot-toast';
+import CompanyInfoIcon from './icons/CompanyInfoIcon';
 
 const INTERNSHIP_TYPES = ['onsite', 'remote', 'hybrid'];
 const DURATIONS = ['1 month', '2 months', '3 months', '6 months', '12 months', 'Custom'];
@@ -70,6 +71,10 @@ interface InternshipFormData {
   applicationProcess: string;
   interviewProcess: string;
   notificationEmail: string;
+  // Add to InternshipFormData
+  applicationType: 'in_app' | 'external_link';
+  applicationLink: string;
+  disclaimer: string;
 }
 
 const initialFormData: InternshipFormData = {
@@ -115,6 +120,9 @@ const initialFormData: InternshipFormData = {
   applicationProcess: '',
   interviewProcess: '',
   notificationEmail: '',
+  applicationType: 'in_app',
+  applicationLink: '',
+  disclaimer: '',
 };
 
 // Add CouponValidation type
@@ -186,6 +194,8 @@ const ModernMultiStepInternshipForm: React.FC = () => {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
   const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 
@@ -239,6 +249,10 @@ const ModernMultiStepInternshipForm: React.FC = () => {
 
   // Razorpay payment handler
   const handleRazorpayPayment = async (amount: number) => {
+    if (!selectedCompanyId) {
+      toast.error('Please select a company before posting.');
+      return;
+    }
     setIsProcessingPayment(true);
     await loadRazorpayScript();
     // Get access token from supabase session if not present
@@ -290,6 +304,10 @@ const ModernMultiStepInternshipForm: React.FC = () => {
   };
 
   const handleFreeOrPaidPayment = async (amount: number) => {
+    if (!selectedCompanyId) {
+      toast.error('Please select a company before posting.');
+      return;
+    }
     if (amount <= 0) {
       setIsProcessingPayment(true);
       // Call backend to record free payment
@@ -382,6 +400,9 @@ const ModernMultiStepInternshipForm: React.FC = () => {
       applicationProcess: draft.applicationProcess || '',
       interviewProcess: draft.interviewProcess || '',
       notificationEmail: draft.notificationEmail || '',
+      applicationType: draft.applicationType || 'in_app',
+      applicationLink: draft.applicationLink || '',
+      disclaimer: draft.disclaimer || '',
     });
     setStep(draft.current_step || 0);
     setHasUnsavedChanges(true);
@@ -441,7 +462,15 @@ const ModernMultiStepInternshipForm: React.FC = () => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  const validateStep5 = () => true;
+  const validateStep5 = () => {
+    const newErrors: any = {};
+    if (formData.applicationType === 'external_link') {
+      if (!formData.applicationLink.trim()) newErrors.applicationLink = 'External application link is required';
+      if (!formData.disclaimer.trim()) newErrors.disclaimer = 'Disclaimer is required for external applications';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   // Handlers
   const handleInput = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -633,6 +662,55 @@ const ModernMultiStepInternshipForm: React.FC = () => {
           className={`w-full px-4 py-3 rounded-xl border ${errors.applicationDeadline ? 'border-red-400' : 'border-gray-200'} focus:outline-none focus:ring-2 focus:ring-blue-500`}
         />
         {errors.applicationDeadline && <p className="text-red-500 text-xs mt-1">{errors.applicationDeadline}</p>}
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">How do you want to receive applications?</label>
+        <div className="flex gap-4 mb-2">
+          <label className="flex items-center">
+            <input
+              type="radio"
+              name="applicationType"
+              value="in_app"
+              checked={formData.applicationType === 'in_app'}
+              onChange={() => setFormData(prev => ({ ...prev, applicationType: 'in_app', applicationLink: '', disclaimer: '' }))}
+              className="mr-2"
+            />
+            In-app (candidates apply inside the app)
+          </label>
+          <label className="flex items-center">
+            <input
+              type="radio"
+              name="applicationType"
+              value="external_link"
+              checked={formData.applicationType === 'external_link'}
+              onChange={() => setFormData(prev => ({ ...prev, applicationType: 'external_link' }))}
+              className="mr-2"
+            />
+            Redirect to external link
+          </label>
+        </div>
+        {formData.applicationType === 'external_link' && (
+          <>
+            <input
+              type="url"
+              name="applicationLink"
+              value={formData.applicationLink}
+              onChange={handleInput}
+              placeholder="Enter external application URL"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              required
+            />
+            <textarea
+              name="disclaimer"
+              value={formData.disclaimer}
+              onChange={handleInput}
+              placeholder="Enter disclaimer (required)"
+              className="mt-2 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              required
+            />
+            {errors.disclaimer && <p className="text-red-500 text-xs mt-1">{errors.disclaimer}</p>}
+          </>
+        )}
       </div>
     </div>
   );
@@ -1280,28 +1358,16 @@ const ModernMultiStepInternshipForm: React.FC = () => {
         toast.error('Please login to post an internship');
         return;
       }
-
-      // Get company ID for the current user
-      const { data: companyData, error: companyError } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('auth_id', user.id)
-        .maybeSingle();
-
-      if (companyError) {
-        throw companyError;
-      }
-
-      if (!companyData) {
-        toast.error('Company profile not found. Please set up your company profile first.');
-        navigate('/employer/company-details');
+      if (!selectedCompanyId) {
+        toast.error('Please select a company before posting.');
+        setSubmitting(false);
         return;
       }
 
       // Format data for submission
       const cleanedPincode = formData.pincode && /^[0-9]{6}$/.test(formData.pincode) ? formData.pincode : null;
       const internshipData = {
-        company_id: companyData.id,
+        company_id: selectedCompanyId,
         title: formData.internshipTitle.trim(),
         description: formData.internshipDescription.trim(),
         type: formData.internshipType,
@@ -1340,7 +1406,10 @@ const ModernMultiStepInternshipForm: React.FC = () => {
         ].filter(Boolean),
         application_deadline: new Date(formData.applicationDeadline).toISOString(),
         start_date: formData.flexibleStart ? null : new Date(formData.startDate).toISOString(),
-        status: 'active'
+        status: 'active',
+        application_type: formData.applicationType,
+        application_link: formData.applicationLink,
+        disclaimer: formData.disclaimer,
       };
 
       // Insert the internship
@@ -1372,6 +1441,10 @@ const ModernMultiStepInternshipForm: React.FC = () => {
   // Navigation
   const handleNext = () => {
     if (step === 0) {
+      if (!selectedCompanyId) {
+        toast.error('Please select a company before continuing.');
+        return;
+      }
       if (!validateStep1()) return;
     }
     if (step === 1) {
@@ -1437,6 +1510,75 @@ const ModernMultiStepInternshipForm: React.FC = () => {
     </div>
   );
 
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('employer_companies')
+        .select('company_id, companies(id, name)')
+        .eq('user_id', user.id);
+      if (!error && data) {
+        const companyList = data.map((row: any) => row.companies);
+        setCompanies(companyList);
+        if (companyList.length === 1) {
+          setSelectedCompanyId(companyList[0].id);
+        }
+      }
+    };
+    fetchCompanies();
+  }, [user]);
+
+  // Company selector for multi-company support
+  const renderCompanySelector = () => {
+    if (companies.length <= 1) return null;
+    return (
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center"><CompanyInfoIcon /> <span className="ml-2">Select Company *</span></label>
+        <select
+          className="block w-full px-4 py-3 rounded-xl border border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base transition-colors duration-200 bg-white hover:border-gray-400"
+          value={selectedCompanyId || ''}
+          onChange={e => setSelectedCompanyId(e.target.value)}
+          required
+        >
+          <option value="">Select company</option>
+          {companies.map(company => (
+            <option key={company.id} value={company.id}>{company.name}</option>
+          ))}
+        </select>
+      </div>
+    );
+  };
+
+  // Add this helper to show company selection if multiple companies
+  const renderCompanySelection = () => {
+    if (companies.length === 0) {
+      return (
+        <div className="mb-4 text-red-600 font-semibold">You must create a company profile before posting an internship.</div>
+      );
+    }
+    if (companies.length === 1) {
+      // Auto-select if only one company
+      if (selectedCompanyId !== companies[0].id) setSelectedCompanyId(companies[0].id);
+      return null;
+    }
+    return (
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Select Company</label>
+        <select
+          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={selectedCompanyId || ''}
+          onChange={e => setSelectedCompanyId(e.target.value)}
+          required
+        >
+          <option value="">-- Select Company --</option>
+          {companies.map((c: any) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+    );
+  };
+
   // Main render
   return (
     <div className="max-w-2xl mx-auto py-10">
@@ -1491,6 +1633,7 @@ const ModernMultiStepInternshipForm: React.FC = () => {
           transition={{ duration: 0.4 }}
           className="bg-white rounded-2xl shadow-2xl p-8 mb-8"
         >
+          {step === 0 && renderCompanySelection()}
           {step === 0 && renderStep1()}
           {step === 1 && renderStep2()}
           {step === 2 && renderStep3()}

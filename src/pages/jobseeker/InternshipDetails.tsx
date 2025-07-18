@@ -38,6 +38,9 @@ interface Internship {
     industry: string | null;
     website: string | null;
   };
+  application_type?: 'in_app' | 'external_link';
+  application_link?: string;
+  disclaimer?: string;
 }
 
 // Helper function to normalize requirements/responsibilities
@@ -171,7 +174,11 @@ const InternshipDetails: React.FC = () => {
   }, [internship, department]);
 
   const handleApply = () => {
-    navigate(`/internships/${id}/apply`);
+    if (internship?.application_type === 'external_link' && internship.application_link) {
+      window.open(internship.application_link, '_blank');
+    } else {
+      navigate(`/internships/${id}/apply`);
+    }
   };
 
 
@@ -549,6 +556,11 @@ const InternshipDetails: React.FC = () => {
               )}
             </section>
           </div>
+        </div>
+      )}
+      {internship?.application_type === 'external_link' && internship?.disclaimer && (
+        <div className="mt-8 text-xs text-gray-500 border-t pt-4">
+          <strong>Note:</strong> {internship.disclaimer}
         </div>
       )}
     </div>

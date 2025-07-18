@@ -67,6 +67,9 @@ interface Job {
   openings: number | null;
   applicants: number | null;
   companies: Company;
+  application_type: string | null;
+  application_link: string | null;
+  disclaimer: string | null;
 }
 
 // Helper function to normalize requirements/responsibilities
@@ -191,7 +194,11 @@ const JobDetails: React.FC = () => {
   }, [job]);
 
   const handleApply = () => {
-    navigate(`/jobs/${id}/apply`);
+    if (job?.application_type === 'external_link' && job.application_link) {
+      window.open(job.application_link, '_blank');
+    } else {
+      navigate(`/jobs/${id}/apply`);
+    }
   };
 
 
@@ -600,6 +607,11 @@ const JobDetails: React.FC = () => {
               )}
             </section>
           </div>
+        </div>
+      )}
+      {job?.application_type === 'external_link' && job?.disclaimer && (
+        <div className="mt-8 text-xs text-gray-500 border-t pt-4">
+          <strong>Note:</strong> {job.disclaimer}
         </div>
       )}
     </div>

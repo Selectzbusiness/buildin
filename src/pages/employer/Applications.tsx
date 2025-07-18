@@ -90,30 +90,36 @@ const Applications: React.FC = () => {
       }
       setLoading(true);
       try {
-        // Fetch employer's company
-        const { data: companyData, error: companyError } = await supabase
-          .from('companies')
-          .select('id')
-          .eq('auth_id', profile.auth_id)
-          .single();
-        if (companyError || !companyData) {
+        // Fetch all company_ids for this user from employer_companies
+        const { data: links, error: linkError } = await supabase
+          .from('employer_companies')
+          .select('company_id')
+          .eq('user_id', profile.auth_id || profile.user_id);
+        if (linkError) {
           setApplications([]);
           setInternshipApplications([]);
           setLoading(false);
           return;
         }
-        // Fetch jobs for this company
+        const companyIds = (links || []).map((l: any) => l.company_id);
+        if (companyIds.length === 0) {
+          setApplications([]);
+          setInternshipApplications([]);
+          setLoading(false);
+          return;
+        }
+        // Fetch jobs for these companies
         const { data: jobsData, error: jobsError } = await supabase
           .from('jobs')
           .select('id, title')
-          .eq('company_id', companyData.id);
+          .in('company_id', companyIds);
         if (jobsError) throw jobsError;
         setJobs(jobsData || []);
-        // Fetch internships for this company
+        // Fetch internships for these companies
         const { data: internshipsData, error: internshipsError } = await supabase
           .from('internships')
           .select('id, title')
-          .eq('company_id', companyData.id);
+          .in('company_id', companyIds);
         if (internshipsError) throw internshipsError;
         setInternships(internshipsData || []);
 

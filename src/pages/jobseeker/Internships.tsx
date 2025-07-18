@@ -29,6 +29,9 @@ interface Internship {
     logo_url?: string;
   };
   experience_level?: string;
+  application_type?: 'in_app' | 'external_link';
+  application_link?: string;
+  disclaimer?: string;
 }
 
 // Define the Internship interface that InternshipCard expects
@@ -52,6 +55,9 @@ interface InternshipCardInternship {
   company?: string;
   companyLogo?: string;
   skills?: string[];
+  application_type?: 'in_app' | 'external_link';
+  application_link?: string;
+  disclaimer?: string;
 }
 
 const Internships: React.FC = () => {

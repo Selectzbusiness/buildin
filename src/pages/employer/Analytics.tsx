@@ -90,13 +90,14 @@ const Analytics: React.FC = () => {
   useEffect(() => {
     const fetchCompanyId = async () => {
       if (!profile?.id) return;
-      // Adjust the table/column names as per your schema
-      const { data, error } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('auth_id', profile.id)
-        .single();
-      if (data?.id) setCompanyId(data.id);
+      // Fetch all company_ids for this user from employer_companies
+      const { data: links, error: linkError } = await supabase
+        .from('employer_companies')
+        .select('company_id')
+        .eq('user_id', profile.id);
+      if (linkError) return;
+      const companyIds = (links || []).map((l: any) => l.company_id);
+      if (companyIds.length > 0) setCompanyId(companyIds[0]);
     };
     fetchCompanyId();
   }, [profile]);

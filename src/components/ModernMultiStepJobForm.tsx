@@ -8,6 +8,7 @@ import DraftManager from './DraftManager';
 import CustomQuestionsManager from './CustomQuestionsManager';
 import toast from 'react-hot-toast';
 import { AuthContext } from '../contexts/AuthContext';
+import CompanyInfoIcon from './icons/CompanyInfoIcon';
 
 // Placeholder for all the field types from JobFormData
 interface CustomQuestion {
@@ -56,6 +57,9 @@ interface JobFormData {
   notificationEmails: string;
   applicationDeadline: string;
   customQuestions: CustomQuestion[];
+  applicationType: 'in_app' | 'external_link';
+  applicationLink: string;
+  disclaimer: string;
 }
 
 const EMPLOYMENT_TYPES = [
@@ -139,6 +143,9 @@ const initialFormData: JobFormData = {
   notificationEmails: '',
   applicationDeadline: '',
   customQuestions: [],
+  applicationType: 'in_app',
+  applicationLink: '',
+  disclaimer: '',
 };
 
 // Add CouponValidation type
@@ -195,14 +202,18 @@ const plans = [
 ];
 
 const ModernMultiStepJobForm: React.FC = () => {
+  const { user, profile } = useContext(AuthContext);
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState<JobFormData>(initialFormData);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [errors, setErrors] = useState<any>({});
   const [submitting, setSubmitting] = useState(false);
   const [showDraftManager, setShowDraftManager] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
   const [showPaymentStep, setShowPaymentStep] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [couponValidation, setCouponValidation] = useState<CouponValidation | null>(null);
@@ -211,6 +222,24 @@ const ModernMultiStepJobForm: React.FC = () => {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('employer_companies')
+        .select('company_id, companies(id, name)')
+        .eq('user_id', user.id);
+      if (!error && data) {
+        const companyList = data.map((row: any) => row.companies);
+        setCompanies(companyList);
+        if (companyList.length === 1) {
+          setSelectedCompanyId(companyList[0].id);
+        }
+      }
+    };
+    fetchCompanies();
+  }, [user]);
 
   // Track changes for auto-save detection
   useEffect(() => {
@@ -305,9 +334,13 @@ const ModernMultiStepJobForm: React.FC = () => {
 
   // Add validation for Step 5 (final validation)
   const validateStep5 = () => {
-    // This step doesn't need validation as it's just a preview
-    // All validation was done in previous steps
-    return true;
+    const newErrors: any = {};
+    if (formData.applicationType === 'external_link') {
+      if (!formData.applicationLink.trim()) newErrors.applicationLink = 'External application link is required';
+      if (!formData.disclaimer.trim()) newErrors.disclaimer = 'Disclaimer is required for external applications';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   // Handlers
@@ -379,6 +412,9 @@ const ModernMultiStepJobForm: React.FC = () => {
       notificationEmails: draft.notificationEmails || '',
       applicationDeadline: draft.applicationDeadline || '',
       customQuestions: draft.customQuestions || [],
+      applicationType: draft.applicationType || 'in_app',
+      applicationLink: draft.applicationLink || '',
+      disclaimer: draft.disclaimer || '',
     });
     setStep(draft.current_step || 0);
     setHasUnsavedChanges(true);
@@ -497,6 +533,55 @@ const ModernMultiStepJobForm: React.FC = () => {
             </button>
           ))}
         </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">How do you want to receive applications?</label>
+        <div className="flex gap-4 mb-2">
+          <label className="flex items-center">
+            <input
+              type="radio"
+              name="applicationType"
+              value="in_app"
+              checked={formData.applicationType === 'in_app'}
+              onChange={() => setFormData(prev => ({ ...prev, applicationType: 'in_app', applicationLink: '', disclaimer: '' }))}
+              className="mr-2"
+            />
+            In-app (candidates apply inside the app)
+          </label>
+          <label className="flex items-center">
+            <input
+              type="radio"
+              name="applicationType"
+              value="external_link"
+              checked={formData.applicationType === 'external_link'}
+              onChange={() => setFormData(prev => ({ ...prev, applicationType: 'external_link' }))}
+              className="mr-2"
+            />
+            Redirect to external link
+          </label>
+        </div>
+        {formData.applicationType === 'external_link' && (
+          <>
+            <input
+              type="url"
+              name="applicationLink"
+              value={formData.applicationLink}
+              onChange={handleInput}
+              placeholder="Enter external application URL"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              required
+            />
+            <textarea
+              name="disclaimer"
+              value={formData.disclaimer}
+              onChange={handleInput}
+              placeholder="Enter disclaimer (required)"
+              className="mt-2 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              required
+            />
+            {errors.disclaimer && <p className="text-red-500 text-xs mt-1">{errors.disclaimer}</p>}
+          </>
+        )}
       </div>
     </div>
   );
@@ -1376,6 +1461,10 @@ const ModernMultiStepJobForm: React.FC = () => {
   // Navigation
   const handleNext = () => {
     if (step === 0) {
+      if (!selectedCompanyId) {
+        toast.error('Please select a company before continuing.');
+        return;
+      }
       if (!validateStep1()) return;
     }
     if (step === 1) {
@@ -1407,6 +1496,13 @@ const ModernMultiStepJobForm: React.FC = () => {
       toast.error('Please complete payment before posting the job.');
       return;
     }
+    setLoading(true);
+    setError(null);
+    if (!selectedCompanyId) {
+      setError('Please select a company');
+      setLoading(false);
+      return;
+    }
     setSubmitting(true);
     
     try {
@@ -1416,16 +1512,22 @@ const ModernMultiStepJobForm: React.FC = () => {
       }
 
       // Get company ID for the current user
-      const { data: companyData, error: companyError } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('auth_id', user.id)
-        .maybeSingle();
-
-      if (companyError) {
-        throw companyError;
+      const { data: links, error: linkError } = await supabase
+        .from('employer_companies')
+        .select('company_id')
+        .eq('user_id', user.id);
+      if (linkError) throw linkError;
+      const companyIds = (links || []).map((l: any) => l.company_id);
+      let companyData = null;
+      if (companyIds.length > 0) {
+        const { data: companies, error: companiesError } = await supabase
+          .from('companies')
+          .select('id')
+          .in('id', companyIds)
+          .maybeSingle();
+        if (companiesError) throw companiesError;
+        companyData = companies;
       }
-
       if (!companyData) {
         toast.error('Company profile not found. Please set up your company profile first.');
         navigate('/employer/company-details');
@@ -1434,7 +1536,7 @@ const ModernMultiStepJobForm: React.FC = () => {
 
       // Format data for submission
       const jobData = {
-        company_id: companyData.id,
+        company_id: selectedCompanyId,
         title: formData.jobTitle.trim(),
         description: formData.jobTitleDescription.trim(),
         job_type: formData.jobType,
@@ -1467,7 +1569,10 @@ const ModernMultiStepJobForm: React.FC = () => {
         job_profile_description: formData.jobProfileDescription,
         notification_emails: [formData.notificationEmails],
         application_deadline: formData.applicationDeadline ? new Date(formData.applicationDeadline).toISOString() : null,
-        status: 'active'
+        status: 'active',
+        application_type: formData.applicationType,
+        application_link: formData.applicationLink,
+        disclaimer: formData.disclaimer,
       };
 
       // Insert the job
@@ -1493,6 +1598,7 @@ const ModernMultiStepJobForm: React.FC = () => {
       toast.error(error.message || 'Failed to post job. Please try again.');
     } finally {
       setSubmitting(false);
+      setLoading(false);
     }
   };
 
@@ -1759,6 +1865,58 @@ const ModernMultiStepJobForm: React.FC = () => {
     </div>
   );
 
+  // In the form rendering (e.g., renderStep1 or at the top of the form):
+  // Add this before the rest of the form fields
+  const renderCompanySelector = () => {
+    if (companies.length <= 1) return null;
+    return (
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center"><CompanyInfoIcon /> <span className="ml-2">Select Company *</span></label>
+        <select
+          className="block w-full px-4 py-3 rounded-xl border border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base transition-colors duration-200 bg-white hover:border-gray-400"
+          value={selectedCompanyId || ''}
+          onChange={e => setSelectedCompanyId(e.target.value)}
+          required
+        >
+          <option value="">Select company</option>
+          {companies.map(company => (
+            <option key={company.id} value={company.id}>{company.name}</option>
+          ))}
+        </select>
+      </div>
+    );
+  };
+
+  // Add this helper to show company selection if multiple companies
+  const renderCompanySelection = () => {
+    if (companies.length === 0) {
+      return (
+        <div className="mb-4 text-red-600 font-semibold">You must create a company profile before posting a job.</div>
+      );
+    }
+    if (companies.length === 1) {
+      // Auto-select if only one company
+      if (selectedCompanyId !== companies[0].id) setSelectedCompanyId(companies[0].id);
+      return null;
+    }
+    return (
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Select Company</label>
+        <select
+          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={selectedCompanyId || ''}
+          onChange={e => setSelectedCompanyId(e.target.value)}
+          required
+        >
+          <option value="">-- Select Company --</option>
+          {companies.map((c: any) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+    );
+  };
+
   // Main render
   return (
     <div className="max-w-2xl mx-auto py-10">
@@ -1815,7 +1973,12 @@ const ModernMultiStepJobForm: React.FC = () => {
           transition={{ duration: 0.4 }}
           className="bg-white rounded-2xl shadow-2xl p-8 mb-8"
         >
-          {step === 0 && renderStep1()}
+          {step === 0 && (
+            <>
+              {renderCompanySelection()}
+              {renderStep1()}
+            </>
+          )}
           {step === 1 && renderStep2()}
           {step === 2 && renderStep3()}
           {step === 3 && renderStep4()}

@@ -167,6 +167,7 @@ const Home: React.FC = () => {
         const { data, error: companiesError } = await supabase
           .from('companies')
           .select('id, name, logo_url, website, description')
+          .eq('is_featured', true) // Only fetch featured companies
           .limit(10);
         if (companiesError) throw companiesError;
         if (isMounted) setCompanies(data || []);

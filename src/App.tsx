@@ -44,6 +44,8 @@ import MyJobs from './pages/jobseeker/MyJobs';
 import Favourites from './pages/jobseeker/Favourites';
 import NotificationsPage from './pages/notifications';
 import PostedMobile from './pages/employer/PostedMobile';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
 
 // Footer Components
 import Careers from './components/Careers';
@@ -129,6 +131,8 @@ const App: React.FC = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+              <Route path="/auth/reset-password" element={<ResetPassword />} />
               
               {/* Main layout routes (for jobseekers) */}
               <Route path="/" element={<MainLayout />}>

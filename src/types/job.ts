@@ -11,4 +11,7 @@ export interface Job {
   status: 'active' | 'paused' | 'closed' | 'expired';
   applications?: number;
   experience: string;
+  application_type?: 'in_app' | 'external_link';
+  application_link?: string;
+  disclaimer?: string;
 } 

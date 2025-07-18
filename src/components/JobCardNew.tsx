@@ -34,6 +34,8 @@ interface Job {
   };
   companyLogo?: string;
   skills?: string[];
+  application_type?: 'external_link' | 'internal_apply';
+  disclaimer?: string;
 }
 
 interface JobCardProps {
@@ -196,6 +198,12 @@ const JobCardNew: React.FC<JobCardProps> = ({ job }) => {
         {/* Description */}
         <div className="mt-2 text-sm text-gray-500 line-clamp-2">{job.description}</div>
         {/* No Apply button here; spacing balanced for clean look */}
+        {job?.application_type === 'external_link' && job?.disclaimer && (
+  <div className="mt-2 text-xs text-gray-500">
+    <strong>Note:</strong> {job.disclaimer}
+  </div>
+)
+}
       </div>
     );
   }
@@ -246,6 +254,12 @@ const JobCardNew: React.FC<JobCardProps> = ({ job }) => {
       {/* Description */}
       <div className="mt-2 text-sm text-gray-500 line-clamp-2">{job.description}</div>
       <div style={{ flex: 1, minHeight: 12 }} />
+      {job?.application_type === 'external_link' && job?.disclaimer && (
+  <div className="mt-2 text-xs text-gray-500">
+    <strong>Note:</strong> {job.disclaimer}
+  </div>
+)
+}
     </div>
   );
 };

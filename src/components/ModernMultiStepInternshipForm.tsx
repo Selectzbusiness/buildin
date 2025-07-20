@@ -196,6 +196,8 @@ const ModernMultiStepInternshipForm: React.FC = () => {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [companies, setCompanies] = useState<any[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [lastValidatedPlanPrice, setLastValidatedPlanPrice] = useState<number | null>(null);
+  const [lastValidatedCouponCode, setLastValidatedCouponCode] = useState<string>('');
 
   const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 
@@ -225,11 +227,17 @@ const ModernMultiStepInternshipForm: React.FC = () => {
       if (error) throw error;
       if (data && data.length > 0) {
         setCouponValidation(data[0] as CouponValidation);
+        setLastValidatedPlanPrice(amount);
+        setLastValidatedCouponCode(couponCode.trim());
       } else {
         setCouponValidation({ valid: false, message: 'Invalid coupon' });
+        setLastValidatedPlanPrice(null);
+        setLastValidatedCouponCode('');
       }
     } catch (e) {
       setCouponValidation({ valid: false, message: 'Failed to validate coupon' });
+      setLastValidatedPlanPrice(null);
+      setLastValidatedCouponCode('');
     } finally {
       setIsValidatingCoupon(false);
     }
@@ -1287,8 +1295,10 @@ const ModernMultiStepInternshipForm: React.FC = () => {
           </div>
           <div>
             <p><span className="font-medium">Coupon Code:</span> {couponCode}</p>
-            {couponValidation && (
-              <p className={`font-medium ${couponValidation.valid ? 'text-green-600' : 'text-red-600'}`}>
+            {couponValidation && couponValidation.valid &&
+              lastValidatedPlanPrice === plans.find((p) => p.name === selectedPlan)?.price &&
+              lastValidatedCouponCode === couponCode.trim() && (
+              <p className="font-medium text-green-600">
                 {couponValidation.message}
                 {couponValidation.discount_amount && ` (Discount: ₹${couponValidation.discount_amount})`}
               </p>
@@ -1308,12 +1318,18 @@ const ModernMultiStepInternshipForm: React.FC = () => {
           <button
             onClick={() => {
               if (couponCode.trim() && selectedPlan) {
-                validateCoupon(getFinalPrice(getSelectedPlanPrice()));
+                const plan = plans.find((p) => p.name === selectedPlan);
+                if (plan) validateCoupon(plan.price);
               } else {
                 setCouponValidation({ valid: false, message: 'Please select a plan and enter a coupon code' });
               }
             }}
-            disabled={isValidatingCoupon || !couponCode.trim() || !selectedPlan}
+            disabled={
+              isValidatingCoupon ||
+              !couponCode.trim() ||
+              !selectedPlan ||
+              isCouponValidForCurrent()
+            }
             className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold flex items-center justify-center gap-2 shadow-lg hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isValidatingCoupon ? <FaSpinner className="animate-spin" /> : <FaCheckCircle />} Apply Coupon
@@ -1577,6 +1593,38 @@ const ModernMultiStepInternshipForm: React.FC = () => {
         </select>
       </div>
     );
+  };
+
+  // Remove auto-apply on couponCode change, only revalidate on plan change if a coupon was already applied
+  useEffect(() => {
+    // Only revalidate coupon if plan changes and a coupon was already validated for the previous plan/code
+    if (
+      selectedPlan &&
+      couponValidation &&
+      couponValidation.valid &&
+      lastValidatedCouponCode === couponCode.trim() &&
+      lastValidatedPlanPrice !== plans.find((p) => p.name === selectedPlan)?.price
+    ) {
+      const plan = plans.find((p) => p.name === selectedPlan);
+      if (plan) validateCoupon(plan.price);
+    }
+    // If coupon code changes, reset coupon validation
+    if (couponCode.trim() !== lastValidatedCouponCode) {
+      setCouponValidation(null);
+      setLastValidatedPlanPrice(null);
+    }
+    // If plan is deselected, reset coupon validation
+    if (!selectedPlan) {
+      setCouponValidation(null);
+      setLastValidatedPlanPrice(null);
+    }
+  }, [selectedPlan, couponCode]);
+
+  // Helper to check if coupon is valid for current plan and code
+  const isCouponValidForCurrent = () => {
+    if (!couponValidation || !couponValidation.valid) return false;
+    // Optionally, check if couponValidation was for the current code and plan price
+    return true;
   };
 
   // Main render

@@ -1,7 +1,7 @@
 import React, { useContext, ReactElement } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
-import { FiMenu, FiX, FiUser, FiSettings, FiLogOut, FiArrowRight, FiBarChart2, FiCreditCard, FiVideo, FiBookmark, FiBriefcase, FiHome } from 'react-icons/fi';
+import { FiMenu, FiX, FiUser, FiSettings, FiLogOut, FiArrowRight, FiBarChart2, FiCreditCard, FiVideo, FiBookmark, FiBriefcase, FiHome, FiBookOpen } from 'react-icons/fi';
 import { useState } from 'react';
 
 const EmployerLayoutMobile: React.FC = () => {
@@ -25,6 +25,9 @@ const EmployerLayoutMobile: React.FC = () => {
     { name: 'Posted', icon: (
       <FiBriefcase className="w-6 h-6 mb-0.5" color="#185a9d" />
     ), path: '/employer/posted-mobile' },
+    { name: 'Courses', icon: (
+      <FiBookOpen className="w-6 h-6 mb-0.5" color="#185a9d" />
+    ), path: '/employer/courses' },
     { name: 'Applications', icon: (
       <svg className="w-6 h-6 mb-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#185a9d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M16 3v4a1 1 0 0 0 1 1h4"></path></svg>
     ), path: '/employer/applications' },
@@ -36,6 +39,9 @@ const EmployerLayoutMobile: React.FC = () => {
     { name: 'Saved Reels', path: '/employer/saved-videos', icon: <FiBookmark className="w-5 h-5 text-[#185a9d]" /> },
     { name: 'Billing', path: '/employer/billing', icon: <FiCreditCard className="w-5 h-5 text-[#185a9d]" /> },
     { name: 'Analytics', path: '/employer/analytics', icon: <FiBarChart2 className="w-5 h-5 text-[#185a9d]" /> },
+    { name: 'Create Course', path: '/employer/course-create', icon: <FiBookOpen className="w-5 h-5 text-[#185a9d]" /> },
+    { name: 'Course Analytics', path: '/employer/course-analytics', icon: <FiBarChart2 className="w-5 h-5 text-[#185a9d]" /> },
+    { name: 'Course Settings', path: '/employer/course-settings', icon: <FiSettings className="w-5 h-5 text-[#185a9d]" /> },
     { name: 'Profile', path: '/employer/profile', icon: <FiUser className="w-5 h-5 text-[#185a9d]" /> },
     { name: 'Credits', path: '/employer/credits', icon: <FiCreditCard className="w-5 h-5 text-[#185a9d]" /> },
     { name: 'Settings', path: '/employer/settings', icon: <FiSettings className="w-5 h-5 text-[#185a9d]" /> },

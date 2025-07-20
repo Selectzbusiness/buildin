@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../config/supabase';
 import { AuthContext } from '../../contexts/AuthContext';
-import { FaGraduationCap, FaPlus, FaSearch, FaFilter } from 'react-icons/fa';
+import { FaGraduationCap, FaPlus, FaSearch, FaFilter, FaEdit } from 'react-icons/fa';
 
 interface Internship {
   id: string;
@@ -273,6 +273,13 @@ const PostedInternships: React.FC = () => {
                 </div>
               </div>
                 <div className="flex items-center space-x-4">
+                    <Link 
+                      to={`/employer/edit-internship/${internship.id}`}
+                      className="text-[#185a9d] hover:text-[#43cea2] transition-colors px-3 py-1 rounded-lg hover:bg-blue-50 flex items-center"
+                    >
+                      <FaEdit className="w-4 h-4 mr-1" />
+                      Edit
+                    </Link>
                     <select
                       className="rounded-lg border border-gray-200 px-3 py-1 focus:ring-2 focus:ring-[#185a9d] focus:border-transparent"
                       value={internship.status}

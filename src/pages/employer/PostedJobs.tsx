@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../config/supabase';
 import { AuthContext } from '../../contexts/AuthContext';
-import { FaBriefcase, FaPlus, FaSearch, FaFilter } from 'react-icons/fa';
+import { FaBriefcase, FaPlus, FaSearch, FaFilter, FaEdit } from 'react-icons/fa';
 
 interface Job {
   id: string;
@@ -243,6 +243,13 @@ const PostedJobs: React.FC = () => {
                       <div className="flex items-center space-x-4">
                           <Link to={`/employer/applications/${job.id}`} className="text-[#185a9d] font-semibold hover:text-[#43cea2] transition-colors">
                               {job.applications[0]?.count || 0} Applications
+                          </Link>
+                          <Link 
+                            to={`/employer/edit-job/${job.id}`}
+                            className="text-[#185a9d] hover:text-[#43cea2] transition-colors px-3 py-1 rounded-lg hover:bg-blue-50 flex items-center"
+                          >
+                            <FaEdit className="w-4 h-4 mr-1" />
+                            Edit
                           </Link>
                           <select 
                             value={job.status} 

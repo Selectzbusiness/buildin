@@ -8,6 +8,7 @@ import NotificationCenter from '../components/NotificationCenter';
 import AIAssistant from '../components/AIAssistant';
 import useIsMobile from '../hooks/useIsMobile';
 import MainLayoutMobile from './mobile/MainLayoutMobile';
+import { FaBookOpen } from 'react-icons/fa';
 
 const MainLayout: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -137,6 +138,16 @@ const MainLayout: React.FC = () => {
                   }`}
                 >
                   Internships
+                </Link>
+                <Link
+                  to="/learning"
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-all duration-300 ease-in-out ${
+                    isActive('/learning')
+                      ? 'text-[#185a9d] bg-[#e3f0fa] shadow-sm'
+                      : 'text-gray-700 hover:text-[#185a9d] hover:bg-[#e3f0fa] hover:shadow-sm'
+                  }`}
+                >
+                  Learning
                 </Link>
                 <button
                   onClick={handlePostJobsClick}

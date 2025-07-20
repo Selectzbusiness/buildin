@@ -3,12 +3,13 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
 import UploadsModal from '../../components/UploadsModal';
 import NotificationCenter from '../../components/NotificationCenter';
-import { FiUser, FiSettings, FiHeart, FiBriefcase, FiLogOut, FiArrowRight, FiHome, FiUpload, FiBell } from 'react-icons/fi';
+import { FiUser, FiSettings, FiHeart, FiBriefcase, FiLogOut, FiArrowRight, FiHome, FiUpload, FiBell, FiBookOpen, FiMenu } from 'react-icons/fi';
 import { supabase } from '../../config/supabase';
 import toast from 'react-hot-toast';
 import { Capacitor } from '@capacitor/core';
 import { useEffect } from 'react';
 import VideoVerifiedTag from '../../components/VideoVerifiedTag';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const MainLayoutMobile: React.FC = () => {
   const { profile, setUser, setProfile } = useContext(AuthContext) as any;
@@ -18,12 +19,20 @@ const MainLayoutMobile: React.FC = () => {
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [isAndroidApp, setIsAndroidApp] = useState(false);
+  const [shouldAnimate, setShouldAnimate] = useState(false);
 
   useEffect(() => {
     if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
       setIsAndroidApp(true);
     }
   }, []);
+
+  // Trigger animation when route changes
+  useEffect(() => {
+    setShouldAnimate(true);
+    const timer = setTimeout(() => setShouldAnimate(false), 100);
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
 
   // Real-time unread count for bell icon (independent of NotificationCenter)
   React.useEffect(() => {
@@ -63,34 +72,72 @@ const MainLayoutMobile: React.FC = () => {
     },
     {
       name: 'My Jobs',
-      icon: <FiBriefcase className="w-6 h-6" style={{ color: '#6366f1' }} />,
+      icon: <FiBriefcase className="w-6 h-6" style={{ color: '#185a9d' }} />,
       path: '/my-jobs',
     },
     {
       name: 'Uploads',
-      icon: <FiUpload className="w-6 h-6" style={{ color: '#2563eb' }} />,
+      icon: <FiUpload className="w-6 h-6" style={{ color: '#43cea2' }} />,
       action: () => setShowUploadsModal(true),
     },
     {
-      name: 'Notifications',
-      icon: (
-        <span className="relative">
-          <FiBell className="w-6 h-6" style={{ color: '#fbbf24' }} />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold border-2 border-white animate-bounce">
-              {unreadCount}
-            </span>
-          )}
-        </span>
-      ),
-      path: '/notifications',
+      name: 'Learning',
+      icon: <FiBookOpen className="w-6 h-6" style={{ color: '#f59e42' }} />,
+      path: '/learning',
     },
     {
-      name: 'Profile',
-      icon: <FiUser className="w-6 h-6" style={{ color: '#6b7280' }} />,
+      name: 'Menu',
+      icon: <FiMenu className="w-6 h-6" style={{ color: '#6b7280' }} />,
       action: () => setShowProfileMenu(true),
     },
   ];
+
+  // Animation variants for main content transitions
+  const mainVariants = {
+    default: { opacity: 1, y: 0 },
+    home: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { duration: 0.6, ease: "easeOut" as const } 
+    },
+    myJobs: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { duration: 0.6, ease: "easeOut" as const } 
+    },
+    notificationsInitial: { opacity: 1, x: -100, scale: 1 },
+    notifications: { opacity: 1, x: 0, scale: 1, transition: { type: 'spring' as const, stiffness: 300, damping: 30 } },
+    learning: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { duration: 0.6, ease: "easeOut" as const } 
+    },
+    upload: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { duration: 0.6, ease: "easeOut" as const } 
+    },
+  };
+
+  // Determine which animation to use based on route
+  let mainAnim = 'default';
+  let initialAnim: any = { opacity: 0, y: 60 };
+  if (location.pathname === '/') {
+    mainAnim = 'home';
+  } else if (location.pathname === '/my-jobs') {
+    mainAnim = 'myJobs';
+  } else if (location.pathname === '/course-notifications') {
+    mainAnim = 'notifications';
+    initialAnim = { opacity: 1, x: -100, scale: 1 };
+  } else if (location.pathname === '/learning') {
+    mainAnim = 'learning';
+  } else if (location.pathname === '/uploads' || showUploadsModal) {
+    mainAnim = 'upload';
+  }
+
+  // Only animate if shouldAnimate is true
+  const currentAnim = shouldAnimate ? mainAnim : 'default';
+  const currentInitial = shouldAnimate ? initialAnim : { opacity: 1, y: 0 };
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] flex flex-col safe-area-top" style={{ paddingTop: 'env(safe-area-inset-top, 32px)' }}>
@@ -123,9 +170,14 @@ const MainLayoutMobile: React.FC = () => {
       </div>
       {/* Main Content - Card style */}
       <main className="flex-1 pt-2 pb-20 px-2">
-        <div className="card p-2 bg-white/90 shadow-lg rounded-2xl">
+        <motion.div
+          variants={mainVariants}
+          initial={currentInitial}
+          animate={currentAnim}
+          className="card p-2 bg-white/90 shadow-lg rounded-2xl"
+        >
           <Outlet />
-        </div>
+        </motion.div>
       </main>
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 flex justify-between items-center px-2 h-16">
@@ -144,54 +196,64 @@ const MainLayoutMobile: React.FC = () => {
       <UploadsModal isOpen={showUploadsModal} onClose={() => setShowUploadsModal(false)} />
       {/* Profile Dropdown Modal */}
       {showProfileMenu && (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col">
-          <div className="flex items-center justify-between p-4 border-b border-gray-100">
-            <div className="font-semibold text-lg text-black">Menu</div>
-            <button className="text-2xl text-gray-400" onClick={() => setShowProfileMenu(false)} aria-label="Close menu">&times;</button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="font-semibold text-lg text-black">{profile?.full_name || 'Profile'}</div>
-              {profile?.intro_video_url && <VideoVerifiedTag />}
+        <AnimatePresence>
+          <motion.div
+            key="menu-modal"
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+            className="fixed inset-0 z-50 bg-white flex flex-col"
+          >
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <div className="font-semibold text-lg text-black">Menu</div>
+              <button className="text-2xl text-gray-400" onClick={() => setShowProfileMenu(false)} aria-label="Close menu">&times;</button>
             </div>
-            <Link to="/profile" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition shadow-sm">
-              <FiUser className="w-6 h-6 text-emerald-500" />
-              <span className="flex-1 text-base font-semibold text-black">Profile</span>
-              <FiArrowRight className="w-4 h-4 text-gray-400" />
-            </Link>
-            <Link to="/settings" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition shadow-sm">
-              <FiSettings className="w-6 h-6 text-gray-500" />
-              <span className="flex-1 text-base font-semibold text-black">Settings</span>
-              <FiArrowRight className="w-4 h-4 text-gray-400" />
-            </Link>
-            <Link to="/favourites" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition shadow-sm">
-              <FiHeart className="w-6 h-6 text-pink-500" />
-              <span className="flex-1 text-base font-semibold text-black">Favourites</span>
-              <FiArrowRight className="w-4 h-4 text-gray-400" />
-            </Link>
-            {/* Switch to Employer Button */}
-            <Link to="/employer/dashboard" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-4 p-4 rounded-xl bg-blue-50 hover:bg-blue-100 transition shadow-sm">
-              <FiBriefcase className="w-6 h-6 text-blue-600" />
-              <span className="flex-1 text-base font-semibold text-black">Post Jobs (Employer)</span>
-              <FiArrowRight className="w-4 h-4 text-blue-400" />
-            </Link>
-            <button onClick={async () => {
-              try {
-                await supabase.auth.signOut();
-                navigate('/login');
-                setUser(null);
-                setProfile(null);
-                setShowProfileMenu(false);
-              } catch (err) {
-                toast.error('Failed to sign out');
-              }
-            }} className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-red-50 transition shadow-sm w-full text-left">
-              <FiLogOut className="w-6 h-6 text-red-500" />
-              <span className="flex-1 text-base font-semibold text-black">Sign Out</span>
-              <FiArrowRight className="w-4 h-4 text-gray-400" />
-            </button>
-          </div>
-        </div>
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+              <Link to="/profile" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition shadow-sm">
+                <FiUser className="w-6 h-6 text-emerald-500" />
+                <span className="flex-1 text-base font-semibold text-black">Profile</span>
+                <FiArrowRight className="w-4 h-4 text-gray-400" />
+              </Link>
+              <Link to="/settings" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition shadow-sm">
+                <FiSettings className="w-6 h-6 text-gray-500" />
+                <span className="flex-1 text-base font-semibold text-black">Settings</span>
+                <FiArrowRight className="w-4 h-4 text-gray-400" />
+              </Link>
+              <Link to="/favourites" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition shadow-sm">
+                <FiHeart className="w-6 h-6 text-pink-500" />
+                <span className="flex-1 text-base font-semibold text-black">Favourites</span>
+                <FiArrowRight className="w-4 h-4 text-gray-400" />
+              </Link>
+              {/* Switch to Employer Button */}
+              <Link to="/employer/dashboard" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-4 p-4 rounded-xl bg-blue-50 hover:bg-blue-100 transition shadow-sm">
+                <FiBriefcase className="w-6 h-6 text-blue-600" />
+                <span className="flex-1 text-base font-semibold text-black">Post Jobs (Employer)</span>
+                <FiArrowRight className="w-4 h-4 text-blue-400" />
+              </Link>
+              <Link to="/course-notifications" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-4 p-4 rounded-xl bg-yellow-50 hover:bg-yellow-100 transition shadow-sm">
+                <FiBell className="w-6 h-6 text-yellow-500" />
+                <span className="flex-1 text-base font-semibold text-black">Course Notifications</span>
+                <FiArrowRight className="w-4 h-4 text-yellow-400" />
+              </Link>
+              <button onClick={async () => {
+                try {
+                  await supabase.auth.signOut();
+                  navigate('/login');
+                  setUser(null);
+                  setProfile(null);
+                  setShowProfileMenu(false);
+                } catch (err) {
+                  toast.error('Failed to sign out');
+                }
+              }} className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 hover:bg-red-50 transition shadow-sm w-full text-left">
+                <FiLogOut className="w-6 h-6 text-red-500" />
+                <span className="flex-1 text-base font-semibold text-black">Sign Out</span>
+                <FiArrowRight className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+          </motion.div>
+        </AnimatePresence>
       )}
     </div>
   );

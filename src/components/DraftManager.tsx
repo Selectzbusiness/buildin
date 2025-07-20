@@ -143,6 +143,16 @@ const DraftManager: React.FC<DraftManagerProps> = ({
         return;
       }
 
+      // Format date fields to YYYY-MM-DD or null
+      const formatDate = (val: string): string | null => {
+        if (!val || typeof val !== 'string' || val.trim() === '') return null;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return null;
+        return d.toISOString().slice(0, 10);
+      };
+      const planned_start_date = formatDate(currentFormData.plannedStartDate);
+      const application_deadline = formatDate(currentFormData.applicationDeadline);
       const draftToSave = {
         draft_name: name,
         current_step: currentStep,
@@ -159,7 +169,7 @@ const DraftManager: React.FC<DraftManagerProps> = ({
         schedules: currentFormData.schedules,
         custom_schedule: currentFormData.customSchedule,
         has_planned_start_date: currentFormData.hasPlannedStartDate,
-        planned_start_date: currentFormData.plannedStartDate === '' ? null : currentFormData.plannedStartDate,
+        planned_start_date,
         number_of_hires: currentFormData.numberOfHires,
         custom_number_of_hires: currentFormData.customNumberOfHires,
         recruitment_timeline: currentFormData.recruitmentTimeline,
@@ -183,7 +193,7 @@ const DraftManager: React.FC<DraftManagerProps> = ({
         custom_skills: currentFormData.customSkills,
         job_profile_description: currentFormData.jobProfileDescription,
         notification_emails: currentFormData.notificationEmails,
-        application_deadline: currentFormData.applicationDeadline === '' ? null : currentFormData.applicationDeadline,
+        application_deadline,
         disclaimer: currentFormData.disclaimer,
         application_type: currentFormData.applicationType,
         application_link: currentFormData.applicationLink,

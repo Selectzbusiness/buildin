@@ -164,6 +164,18 @@ const InternshipDraftManager: React.FC<InternshipDraftManagerProps> = ({
         // add any other numeric fields here
       };
       const cleanedDraft = cleanNumericFields(draftObj);
+      // Ensure date fields are in YYYY-MM-DD or null
+      const formatDate = (val: string): string | null => {
+        if (!val || typeof val !== 'string' || val.trim() === '') return null;
+        // Acceptable: already YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+        // Try to parse and format
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return null;
+        return d.toISOString().slice(0, 10);
+      };
+      const start_date = formatDate(cleanedDraft.startDate);
+      const application_deadline = formatDate(cleanedDraft.applicationDeadline);
       const { data, error } = await supabase
         .from('internship_drafts')
         .insert({
@@ -180,9 +192,9 @@ const InternshipDraftManager: React.FC<InternshipDraftManagerProps> = ({
           street_address: cleanedDraft.streetAddress,
           duration: cleanedDraft.duration,
           custom_duration: cleanedDraft.customDuration,
-          start_date: cleanedDraft.startDate,
+          start_date,
           flexible_start: cleanedDraft.flexibleStart,
-          application_deadline: cleanedDraft.applicationDeadline,
+          application_deadline,
           stipend_type: cleanedDraft.stipendType,
           stipend_amount: cleanedDraft.stipend_amount,
           stipend_frequency: cleanedDraft.stipendFrequency,

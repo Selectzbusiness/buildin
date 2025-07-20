@@ -181,6 +181,14 @@ const EmployerLayout: React.FC = () => {
                 <span className="text-sm font-medium">Applications</span>
               </Link>
               <Link
+                to="/employer/courses"
+                className={`flex items-center px-4 py-3 rounded-xl transition-colors duration-200 ${
+                  isActive('/employer/courses') ? 'text-black bg-[#e3f0fa] shadow' : 'text-gray-700 hover:bg-[#e3f0fa] hover:text-black hover:shadow'
+                }`}
+              >
+                <span className="text-sm font-medium">Courses</span>
+              </Link>
+              <Link
                 to="/employer/billing"
                 className="flex items-center px-4 py-3 text-gray-700 rounded-xl transition-colors duration-200 hover:bg-[#e3f0fa] hover:text-black hover:shadow"
               >

@@ -283,54 +283,82 @@ const Login: React.FC = () => {
       setSuccess('Login successful! Redirecting...');
       setLoading(false);
 
-      // Immediate navigation without setTimeout to prevent race conditions
-      if (formData.role === 'employer') {
-        // Check if employer already has company details
+      // Wait for session to be properly established
+      let sessionEstablished = false;
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      while (!sessionEstablished && attempts < maxAttempts) {
         try {
-          const { data: links, error: linkError } = await supabase
-            .from('employer_companies')
-            .select('company_id')
-            .eq('user_id', loginData.user.id);
-
-          if (linkError) {
-            console.error('Error checking company profile:', linkError);
-            // If error checking, redirect to company details form
-            navigate('/employer/company-details');
-            return;
+          const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError) {
+            console.error('Session check error:', sessionError);
+            break;
           }
+          if (sessionData.session && sessionData.session.user) {
+            console.log('Session established successfully');
+            sessionEstablished = true;
+            break;
+          }
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms before retry
+        } catch (err) {
+          console.error('Error checking session after login:', err);
+          break;
+        }
+      }
 
-          const companyIds = (links || []).map((l: any) => l.company_id);
-          let companyData = null;
-          if (companyIds.length > 0) {
-            const { data: companies, error: companiesError } = await supabase
-              .from('companies')
-              .select('*')
-              .in('id', companyIds)
-              .maybeSingle();
-            if (companiesError) {
-              console.error('Error fetching company profile:', companiesError);
+      // Navigate after session is established or max attempts reached
+      setTimeout(async () => {
+        if (formData.role === 'employer') {
+          // Check if employer already has company details
+          try {
+            const { data: links, error: linkError } = await supabase
+              .from('employer_companies')
+              .select('company_id')
+              .eq('user_id', loginData.user.id);
+
+            if (linkError) {
+              console.error('Error checking company profile:', linkError);
+              // If error checking, redirect to company details form
               navigate('/employer/company-details');
               return;
             }
-            companyData = companies;
-          }
 
-          if (companyData) {
-            // Company profile exists, redirect to employer dashboard
-            navigate('/employer/dashboard');
-          } else {
-            // No company profile, redirect to company details form
+            const companyIds = (links || []).map((l: any) => l.company_id);
+            let companyData = null;
+            if (companyIds.length > 0) {
+              const { data: companies, error: companiesError } = await supabase
+                .from('companies')
+                .select('*')
+                .in('id', companyIds)
+                .limit(1)
+                .single();
+              if (companiesError) {
+                console.error('Error fetching company profile:', companiesError);
+                navigate('/employer/company-details');
+                return;
+              }
+              companyData = companies;
+            }
+
+            if (companyData) {
+              // Company profile exists, redirect to employer dashboard
+              navigate('/employer/dashboard');
+            } else {
+              // No company profile, redirect to company details form
+              navigate('/employer/company-details');
+            }
+          } catch (err) {
+            console.error('Error checking company profile:', err);
+            // If error, redirect to company details form
             navigate('/employer/company-details');
           }
-        } catch (err) {
-          console.error('Error checking company profile:', err);
-          // If error, redirect to company details form
-          navigate('/employer/company-details');
+        } else {
+          // If jobseeker, always redirect to home page
+          navigate('/');
         }
-      } else {
-        // If jobseeker, always redirect to home page
-        navigate('/');
-      }
+      }, 500); // Wait 500ms for auth state to settle
     } catch (err: any) {
       setError(err.message || 'An error occurred during login. Please try again.');
       setLoading(false);
@@ -530,7 +558,7 @@ const Login: React.FC = () => {
                   onClick={() => setFormData({ ...formData, role: 'jobseeker' })}
                   disabled={loading}
                 >
-                  Job Seeker
+                  Candidate
                 </button>
                 <button
                   type="button"
@@ -538,7 +566,7 @@ const Login: React.FC = () => {
                   onClick={() => setFormData({ ...formData, role: 'employer' })}
                   disabled={loading}
                 >
-                  Employer
+                  Recruiter
                 </button>
               </div>
             </div>

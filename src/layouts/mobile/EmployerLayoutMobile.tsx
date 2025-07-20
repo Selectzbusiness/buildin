@@ -5,7 +5,7 @@ import { FiMenu, FiX, FiUser, FiSettings, FiLogOut, FiArrowRight, FiBarChart2, F
 import { useState } from 'react';
 
 const EmployerLayoutMobile: React.FC = () => {
-  const { profile, setUser, setProfile } = useContext(AuthContext) as any;
+  const { profile, setUser, setProfile, logout } = useContext(AuthContext) as any;
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -127,17 +127,15 @@ const EmployerLayoutMobile: React.FC = () => {
               </button>
             ))}
             <button
-              onClick={async () => {
-                try {
-                  await import('../../config/supabase').then(m => m.supabase.auth.signOut());
-                  navigate('/login');
-                  setUser(null);
-                  setProfile(null);
-                  setIsMenuOpen(false);
-                } catch (err) {
-                  alert('Failed to sign out');
-                }
-              }}
+                              onClick={async () => {
+                  try {
+                    await logout();
+                    navigate('/login');
+                    setIsMenuOpen(false);
+                  } catch (err) {
+                    alert('Failed to sign out');
+                  }
+                }}
               className="flex items-center gap-4 px-4 py-3 rounded-xl bg-red-50 hover:bg-red-100 text-base font-semibold text-red-600 shadow-sm transition mt-4"
             >
               <span className="flex items-center justify-center w-8 h-8 rounded-full bg-red-100 group-hover:bg-red-200 transition"><FiLogOut className="w-5 h-5" /></span>

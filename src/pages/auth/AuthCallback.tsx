@@ -84,7 +84,8 @@ const AuthCallback: React.FC = () => {
                 .from('companies')
                 .select('*')
                 .in('id', companyIds)
-                .maybeSingle();
+                .limit(1)
+                .single();
               if (companiesError) {
                 navigate('/employer/company-details');
                 return;

@@ -58,9 +58,33 @@ import ContactUs from './components/ContactUs';
 import HelpCenter from './components/HelpCenter';
 import AboutUs from './components/AboutUs';
 
+// Loading Component
+const AuthLoadingScreen: React.FC = () => (
+  <div className="min-h-screen bg-[#f1f5f9] flex items-center justify-center">
+    <div className="text-center">
+      <div className="flex items-center justify-center mb-4">
+        <img
+          src="/selectz.logo.png"
+          alt="Selectz Logo"
+          className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm mr-3 object-contain shadow"
+          style={{ background: 'rgba(255,255,255,0.2)' }}
+        />
+        <span className="text-2xl font-bold text-gray-800 tracking-tight">Selectz</span>
+      </div>
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#185a9d] mx-auto mb-4"></div>
+      <p className="text-gray-600 text-sm">Loading your account...</p>
+    </div>
+  </div>
+);
+
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
+  
+  if (loading) {
+    return <AuthLoadingScreen />;
+  }
+  
   if (!user) {
     return <Navigate to="/login" />;
   }
@@ -72,7 +96,12 @@ const RoleProtectedRoute: React.FC<{
   children: React.ReactNode;
   allowedRole: 'employer' | 'jobseeker';
 }> = ({ children }) => {
-  const { user } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
+  
+  if (loading) {
+    return <AuthLoadingScreen />;
+  }
+  
   if (!user) {
     return <Navigate to="/login" />;
   }
@@ -81,7 +110,12 @@ const RoleProtectedRoute: React.FC<{
 
 // Special route for company details that allows any authenticated user
 const CompanyDetailsRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
+  
+  if (loading) {
+    return <AuthLoadingScreen />;
+  }
+  
   if (!user) {
     return <Navigate to="/login" />;
   }

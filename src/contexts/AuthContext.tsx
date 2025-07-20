@@ -49,6 +49,7 @@ interface AuthContextType {
   loading: boolean;
   refreshProfile: (sessionParam?: Session) => Promise<void>;
   setProfile: React.Dispatch<React.SetStateAction<Profile | null>>;
+  logout: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -58,6 +59,7 @@ export const AuthContext = createContext<AuthContextType>({
   loading: true,
   refreshProfile: async () => {},
   setProfile: () => {},
+  logout: async () => {},
 });
 
 interface AuthProviderProps {
@@ -68,64 +70,85 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionRestored, setSessionRestored] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Wait for Supabase to restore the session from localStorage
+    let mounted = true;
+    let authListener: any = null;
+
     const restoreSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
         if (error) {
           console.error('Error restoring session:', error);
           setUser(null);
           setProfile(null);
           setLoading(false);
+          setSessionRestored(true);
           return;
         }
-        setUser(session?.user ?? null);
+
         if (session?.user) {
+          setUser(session.user);
           await fetchProfile(session.user.id);
         } else {
+          setUser(null);
           setProfile(null);
         }
+        
         setLoading(false);
+        setSessionRestored(true);
       } catch (err) {
         console.error('UNHANDLED ERROR in restoreSession:', err);
-        setUser(null);
-        setProfile(null);
-        setLoading(false);
-      }
-    };
-
-    // Only run after the page is loaded (to ensure localStorage is available)
-    if (document.readyState === 'complete') {
-      restoreSession();
-    } else {
-      window.addEventListener('load', restoreSession);
-      return () => window.removeEventListener('load', restoreSession);
-    }
-
-    // Listen for auth state changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT' || !session?.user) {
+        if (mounted) {
           setUser(null);
           setProfile(null);
           setLoading(false);
-          return;
+          setSessionRestored(true);
         }
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
-        }
-        setLoading(false);
       }
-    );
+    };
+
+    // Set up auth state change listener
+    const setupAuthListener = () => {
+      authListener = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          if (!mounted) return;
+          
+          if (event === 'SIGNED_OUT' || !session?.user) {
+            setUser(null);
+            setProfile(null);
+            setLoading(false);
+            return;
+          }
+          
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            setUser(session.user);
+            if (session.user) {
+              await fetchProfile(session.user.id);
+            }
+            setLoading(false);
+          }
+        }
+      );
+    };
+
+    // Start session restoration immediately
+    restoreSession().then(() => {
+      if (mounted) {
+        setupAuthListener();
+      }
+    });
 
     return () => {
-      authListener.subscription.unsubscribe();
+      mounted = false;
+      if (authListener?.subscription) {
+        authListener.subscription.unsubscribe();
+      }
     };
   }, []);
 
@@ -204,13 +227,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const logout = async () => {
+    try {
+      // Check if there's an active session first
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          console.error('Error signing out:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+    
+    // Always clear local state
+    setUser(null);
+    setProfile(null);
+  };
+
   const value = {
     user,
     setUser,
     profile,
-    loading,
+    loading: loading || !sessionRestored, // Show loading until session is restored
     refreshProfile,
     setProfile,
+    logout,
   };
 
   // Always render children, let components handle loading

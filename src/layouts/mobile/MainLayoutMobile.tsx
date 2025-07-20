@@ -12,7 +12,7 @@ import VideoVerifiedTag from '../../components/VideoVerifiedTag';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const MainLayoutMobile: React.FC = () => {
-  const { profile, setUser, setProfile } = useContext(AuthContext) as any;
+  const { user, profile, setUser, setProfile, logout } = useContext(AuthContext) as any;
   const [showUploadsModal, setShowUploadsModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const navigate = useNavigate();
@@ -226,11 +226,59 @@ const MainLayoutMobile: React.FC = () => {
                 <FiArrowRight className="w-4 h-4 text-gray-400" />
               </Link>
               {/* Switch to Employer Button */}
-              <Link to="/employer/dashboard" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-4 p-4 rounded-xl bg-blue-50 hover:bg-blue-100 transition shadow-sm">
+              <button onClick={async () => {
+                setShowProfileMenu(false);
+                if (!profile) {
+                  navigate('/login');
+                  return;
+                }
+
+                try {
+                  // Check if user has company details
+                  const { data: links, error: linkError } = await supabase
+                    .from('employer_companies')
+                    .select('company_id')
+                    .eq('user_id', user?.id);
+
+                  if (linkError) {
+                    console.error('Error checking company profile:', linkError);
+                    navigate('/employer/company-details');
+                    return;
+                  }
+
+                  const companyIds = (links || []).map((l: any) => l.company_id);
+                  let companyData = null;
+                  if (companyIds.length > 0) {
+                    const { data: companies, error: companiesError } = await supabase
+                      .from('companies')
+                      .select('*')
+                      .in('id', companyIds)
+                      .limit(1)
+                      .single();
+                    if (companiesError) {
+                      console.error('Error fetching company profile:', companiesError);
+                      navigate('/employer/company-details');
+                      return;
+                    }
+                    companyData = companies;
+                  }
+
+                  if (companyData) {
+                    // Company profile exists, redirect to employer dashboard
+                    navigate('/employer/dashboard');
+                  } else {
+                    // No company profile, redirect to company details form
+                    navigate('/employer/company-details');
+                  }
+                } catch (err) {
+                  console.error('Error checking company profile:', err);
+                  navigate('/employer/company-details');
+                }
+              }} className="flex items-center gap-4 p-4 rounded-xl bg-blue-50 hover:bg-blue-100 transition shadow-sm w-full text-left">
                 <FiBriefcase className="w-6 h-6 text-blue-600" />
-                <span className="flex-1 text-base font-semibold text-black">Post Jobs (Employer)</span>
+                <span className="flex-1 text-base font-semibold text-black">Post Jobs (Recruiter)</span>
                 <FiArrowRight className="w-4 h-4 text-blue-400" />
-              </Link>
+              </button>
               <Link to="/course-notifications" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-4 p-4 rounded-xl bg-yellow-50 hover:bg-yellow-100 transition shadow-sm">
                 <FiBell className="w-6 h-6 text-yellow-500" />
                 <span className="flex-1 text-base font-semibold text-black">Course Notifications</span>
@@ -238,10 +286,8 @@ const MainLayoutMobile: React.FC = () => {
               </Link>
               <button onClick={async () => {
                 try {
-                  await supabase.auth.signOut();
+                  await logout();
                   navigate('/login');
-                  setUser(null);
-                  setProfile(null);
                   setShowProfileMenu(false);
                 } catch (err) {
                   toast.error('Failed to sign out');

@@ -9,7 +9,7 @@ import EmployerLayoutMobile from './mobile/EmployerLayoutMobile';
 
 const EmployerLayout: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const { profile, user, setUser, setProfile } = useContext(AuthContext);
+  const { user, profile, setUser, setProfile, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
@@ -58,10 +58,8 @@ const EmployerLayout: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await logout();
       navigate('/login');
-      setUser(null);
-      setProfile(null);
     } catch (err) {
       alert('Failed to sign out');
     }

@@ -16,7 +16,7 @@ const MainLayout: React.FC = () => {
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { user, profile, setUser, setProfile } = useContext(AuthContext);
+  const { user, profile, setUser, setProfile, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 640);
@@ -42,21 +42,60 @@ const MainLayout: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await logout();
       navigate('/login');
-      setUser(null);
-      setProfile(null);
       setIsDropdownOpen(false);
     } catch (err) {
       alert('Failed to sign out');
     }
   };
 
-  const handlePostJobsClick = () => {
+  const handlePostJobsClick = async () => {
     if (!profile) {
       navigate('/login');
-    } else {
-      navigate('/employer/dashboard');
+      return;
+    }
+
+    try {
+      // Check if user has company details
+      const { data: links, error: linkError } = await supabase
+        .from('employer_companies')
+        .select('company_id')
+        .eq('user_id', user?.id);
+
+      if (linkError) {
+        console.error('Error checking company profile:', linkError);
+        navigate('/employer/company-details');
+        return;
+      }
+
+      const companyIds = (links || []).map((l: any) => l.company_id);
+      let companyData = null;
+      if (companyIds.length > 0) {
+        const { data: companies, error: companiesError } = await supabase
+          .from('companies')
+          .select('*')
+          .in('id', companyIds)
+          .limit(1)
+          .single();
+        if (companiesError) {
+          console.error('Error fetching company profile:', companiesError);
+          navigate('/employer/company-details');
+          return;
+        }
+        companyData = companies;
+      }
+
+      if (companyData) {
+        // Company profile exists, redirect to employer dashboard
+        navigate('/employer/dashboard');
+      } else {
+        // No company profile, redirect to company details form
+        navigate('/employer/company-details');
+      }
+    } catch (err) {
+      console.error('Error checking company profile:', err);
+      navigate('/employer/company-details');
     }
   };
 

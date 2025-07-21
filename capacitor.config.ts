@@ -18,11 +18,12 @@ const config: CapacitorConfig = {
       backgroundColor: '#ffffff',
       showSpinner: true,
       spinnerColor: '#3b82f6',
-      androidStatusBarTranslucent: true
+      androidStatusBarTranslucent: false
     },
     StatusBar: {
       style: 'dark',
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      overlaysWebView: false
     }
   },
   ios: {

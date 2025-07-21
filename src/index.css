@@ -8,9 +8,11 @@
   }
 
   body, #root {
-    padding-top: env(safe-area-inset-top);
-    padding-top: constant(safe-area-inset-top, 24px);
+    padding-top: var(--sat, env(safe-area-inset-top, 0px));
+    padding-top: var(--sat, constant(safe-area-inset-top, 0px));
     background: #fff;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 }
 
@@ -329,6 +331,71 @@
   }
 
   .safe-area-top {
-    padding-top: env(safe-area-inset-top, 32px);
+    padding-top: var(--sat, env(safe-area-inset-top, 44px));
+    padding-top: var(--sat, constant(safe-area-inset-top, 44px));
+  }
+
+  .safe-area-bottom {
+    padding-bottom: var(--sab, env(safe-area-inset-bottom, 34px));
+    padding-bottom: var(--sab, constant(safe-area-inset-bottom, 34px));
+  }
+
+  .safe-area-left {
+    padding-left: var(--sal, env(safe-area-inset-left, 0px));
+    padding-left: var(--sal, constant(safe-area-inset-left, 0px));
+  }
+
+  .safe-area-right {
+    padding-right: var(--sar, env(safe-area-inset-right, 0px));
+    padding-right: var(--sar, constant(safe-area-inset-right, 0px));
+  }
+
+  .status-bar-height {
+    height: var(--sat, env(safe-area-inset-top, 44px));
+    height: var(--sat, constant(safe-area-inset-top, 44px));
+  }
+
+  .bottom-safe-area {
+    height: var(--sab, env(safe-area-inset-bottom, 34px));
+    height: var(--sab, constant(safe-area-inset-bottom, 34px));
+  }
+
+  /* Mobile-specific utilities */
+  .mobile-safe-top {
+    padding-top: var(--sat, env(safe-area-inset-top, 44px));
+    padding-top: var(--sat, constant(safe-area-inset-top, 44px));
+  }
+
+  .mobile-safe-bottom {
+    padding-bottom: var(--sab, env(safe-area-inset-bottom, 34px));
+    padding-bottom: var(--sab, constant(safe-area-inset-bottom, 34px));
+  }
+
+  .mobile-safe-left {
+    padding-left: var(--sal, env(safe-area-inset-left, 0px));
+    padding-left: var(--sal, constant(safe-area-inset-left, 0px));
+  }
+
+  .mobile-safe-right {
+    padding-right: var(--sar, env(safe-area-inset-right, 0px));
+    padding-right: var(--sar, constant(safe-area-inset-right, 0px));
+  }
+
+  /* Prevent content from going under status bar */
+  .prevent-status-bar-overlap {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Ensure content stays within safe areas */
+  .content-safe-area {
+    padding-top: var(--sat, env(safe-area-inset-top, 44px));
+    padding-top: var(--sat, constant(safe-area-inset-top, 44px));
+    padding-bottom: var(--sab, env(safe-area-inset-bottom, 34px));
+    padding-bottom: var(--sab, constant(safe-area-inset-bottom, 34px));
+    padding-left: var(--sal, env(safe-area-inset-left, 0px));
+    padding-left: var(--sal, constant(safe-area-inset-left, 0px));
+    padding-right: var(--sar, env(safe-area-inset-right, 0px));
+    padding-right: var(--sar, constant(safe-area-inset-right, 0px));
   }
 } 

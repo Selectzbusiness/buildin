@@ -10,6 +10,7 @@ import { Capacitor } from '@capacitor/core';
 import { useEffect } from 'react';
 import VideoVerifiedTag from '../../components/VideoVerifiedTag';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSafeArea } from '../../hooks/useSafeArea';
 
 const MainLayoutMobile: React.FC = () => {
   const { user, profile, setUser, setProfile, logout } = useContext(AuthContext) as any;
@@ -20,6 +21,7 @@ const MainLayoutMobile: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isAndroidApp, setIsAndroidApp] = useState(false);
   const [shouldAnimate, setShouldAnimate] = useState(false);
+  const { statusBarHeight, bottomSafeArea, isNativePlatform } = useSafeArea();
 
   useEffect(() => {
     if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
@@ -140,10 +142,18 @@ const MainLayoutMobile: React.FC = () => {
   const currentInitial = shouldAnimate ? initialAnim : { opacity: 1, y: 0 };
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] flex flex-col safe-area-top" style={{ paddingTop: 'env(safe-area-inset-top, 32px)' }}>
+    <div className="min-h-screen bg-[#f1f5f9] flex flex-col">
+      {/* Status Bar Spacer */}
+      {isNativePlatform && (
+        <div 
+          className="bg-white" 
+          style={{ height: `${statusBarHeight}px` }}
+        ></div>
+      )}
+      
       {/* Header with logo and login/signup button for mobile */}
       <div
-        className="flex items-center justify-between px-4 pt-4 pb-2"
+        className="flex items-center justify-between px-4 pt-4 pb-2 bg-white border-b border-gray-100"
       >
         <div className="flex items-center">
           <img
@@ -192,6 +202,14 @@ const MainLayoutMobile: React.FC = () => {
           </button>
         ))}
       </nav>
+      
+      {/* Bottom Safe Area Spacer */}
+      {isNativePlatform && bottomSafeArea > 0 && (
+        <div 
+          className="fixed bottom-0 left-0 right-0 bg-white" 
+          style={{ height: `${bottomSafeArea}px` }}
+        ></div>
+      )}
       {/* Uploads Modal */}
       <UploadsModal isOpen={showUploadsModal} onClose={() => setShowUploadsModal(false)} />
       {/* Profile Dropdown Modal */}

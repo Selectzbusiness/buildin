@@ -89,24 +89,42 @@ const Analytics: React.FC = () => {
 
   useEffect(() => {
     const fetchCompanyId = async () => {
-      if (!profile?.id) return;
+      if (!profile) return;
+      const userId = profile.auth_id || profile.user_id;
+      if (!userId) return;
+      
       // Fetch all company_ids for this user from employer_companies
       const { data: links, error: linkError } = await supabase
         .from('employer_companies')
         .select('company_id')
-        .eq('user_id', profile.id);
-      if (linkError) return;
+        .eq('user_id', userId);
+      if (linkError) {
+        console.error('Error fetching company ID:', linkError);
+        return;
+      }
       const companyIds = (links || []).map((l: any) => l.company_id);
-      if (companyIds.length > 0) setCompanyId(companyIds[0]);
+      if (companyIds.length > 0) {
+        setCompanyId(companyIds[0]);
+      } else {
+        console.log('No company associations found for user');
+        setLoading(false);
+      }
     };
     fetchCompanyId();
   }, [profile]);
 
   // Fetch all analytics data
   useEffect(() => {
-    if (!companyId) return;
+    if (!companyId) {
+      console.log('No company ID available, setting loading to false');
+      setLoading(false);
+      return;
+    }
+    
+    console.log('Fetching analytics data for company:', companyId);
     setLoading(true);
     setError(null);
+    
     Promise.all([
       supabase.rpc('get_employer_summary', { company_id: companyId }),
       supabase.rpc('get_employer_performance', { company_id: companyId }),
@@ -172,6 +190,42 @@ const Analytics: React.FC = () => {
       })
       .finally(() => setLoading(false));
   }, [companyId, timeRange]);
+
+  // Add a timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.log('Analytics loading timeout, setting fallback data');
+        setLoading(false);
+        setError('Loading timeout. Please refresh the page.');
+        setSummary({ total_posted: 0, total_applications: 0, total_hired: 0, active_jobs: 0, conversion_rate: 0 });
+        setPerformance([]);
+        setTimeSeries([]);
+        setFunnel([]);
+        setTopPosts([]);
+        setRecentActivity([]);
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [loading]);
+
+  // Check if user has employer access
+  if (!profile) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
+          <p className="text-gray-500">This page is for employers only. Please complete your company profile to access employer features.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

@@ -3,11 +3,13 @@ import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
 import { FiMenu, FiX, FiUser, FiSettings, FiLogOut, FiArrowRight, FiBarChart2, FiCreditCard, FiVideo, FiBookmark, FiBriefcase, FiHome, FiBookOpen } from 'react-icons/fi';
 import { useState } from 'react';
+import { useSafeArea } from '../../hooks/useSafeArea';
 
 const EmployerLayoutMobile: React.FC = () => {
   const { profile, setUser, setProfile, logout } = useContext(AuthContext) as any;
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { statusBarHeight, bottomSafeArea, isNativePlatform } = useSafeArea();
 
   // Bottom nav items
   const navItems: {
@@ -49,8 +51,11 @@ const EmployerLayoutMobile: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] flex flex-col">
-      {/* Sticky Mobile Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-[#e3f0fa] flex items-center justify-between px-4 h-14 shadow-sm">
+      {/* Sticky Header with safe area padding */}
+      <header
+        className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-[#e3f0fa] flex items-center justify-between px-4 py-2 shadow-sm"
+        style={{ paddingTop: 'env(safe-area-inset-top, 8px)' }}
+      >
         <div className="flex items-center gap-2">
           <img
             src="/selectz.logo.png"
@@ -67,9 +72,8 @@ const EmployerLayoutMobile: React.FC = () => {
           Switch to Candidate
         </button>
       </header>
-
       {/* Main Content - Card style */}
-      <main className="flex-1 pt-2 pb-20 px-2">
+      <main className="flex-1 pb-20 px-2">
         <div className="card p-2 bg-white/90 shadow-lg rounded-2xl">
           <Outlet />
         </div>

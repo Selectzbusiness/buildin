@@ -33,12 +33,8 @@ const PostedInternships: React.FC = () => {
       return;
     }
     
-    // Check if user has employer role or if they have a company (which indicates they're an employer)
-    const hasEmployerRole = profile.roles?.includes('employer');
-    if (!hasEmployerRole) {
-      // Try to check if they have a company instead of relying on roles
-      console.log('User does not have employer role, checking for company...');
-    }
+    // Check if user has employer access by looking for company associations
+    // We don't rely on roles since they might not be properly set
     
     const userId = profile.auth_id || profile.user_id;
     if (!userId) {

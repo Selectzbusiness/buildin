@@ -98,9 +98,12 @@ export const InternshipCard: React.FC<InternshipCardProps> = ({
 
   const formatStipend = () => {
     if (internship.stipend_type === 'range') {
-      return `₹${internship.min_amount} - ₹${internship.max_amount} ${internship.pay_rate}`;
+      return `₹${internship.min_amount.toLocaleString()} - ₹${internship.max_amount.toLocaleString()}${internship.pay_rate ? ' / ' + internship.pay_rate : ''}`;
     }
-    return `₹${internship.amount} ${internship.pay_rate}`;
+    if (internship.amount) {
+      return `₹${internship.amount.toLocaleString()}${internship.pay_rate ? ' / ' + internship.pay_rate : ''}`;
+    }
+    return 'Not specified';
   };
 
   // Save/Unsave logic

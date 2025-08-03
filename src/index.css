@@ -331,13 +331,13 @@
   }
 
   .safe-area-top {
-    padding-top: var(--sat, env(safe-area-inset-top, 44px));
-    padding-top: var(--sat, constant(safe-area-inset-top, 44px));
+    padding-top: var(--sat, env(safe-area-inset-top, 24px));
+    padding-top: var(--sat, constant(safe-area-inset-top, 24px));
   }
 
   .safe-area-bottom {
-    padding-bottom: var(--sab, env(safe-area-inset-bottom, 34px));
-    padding-bottom: var(--sab, constant(safe-area-inset-bottom, 34px));
+    padding-bottom: var(--sab, env(safe-area-inset-bottom, 20px));
+    padding-bottom: var(--sab, constant(safe-area-inset-bottom, 20px));
   }
 
   .safe-area-left {
@@ -351,24 +351,24 @@
   }
 
   .status-bar-height {
-    height: var(--sat, env(safe-area-inset-top, 44px));
-    height: var(--sat, constant(safe-area-inset-top, 44px));
+    height: var(--sat, env(safe-area-inset-top, 24px));
+    height: var(--sat, constant(safe-area-inset-top, 24px));
   }
 
   .bottom-safe-area {
-    height: var(--sab, env(safe-area-inset-bottom, 34px));
-    height: var(--sab, constant(safe-area-inset-bottom, 34px));
+    height: var(--sab, env(safe-area-inset-bottom, 20px));
+    height: var(--sab, constant(safe-area-inset-bottom, 20px));
   }
 
   /* Mobile-specific utilities */
   .mobile-safe-top {
-    padding-top: var(--sat, env(safe-area-inset-top, 44px));
-    padding-top: var(--sat, constant(safe-area-inset-top, 44px));
+    padding-top: var(--sat, env(safe-area-inset-top, 24px));
+    padding-top: var(--sat, constant(safe-area-inset-top, 24px));
   }
 
   .mobile-safe-bottom {
-    padding-bottom: var(--sab, env(safe-area-inset-bottom, 34px));
-    padding-bottom: var(--sab, constant(safe-area-inset-bottom, 34px));
+    padding-bottom: var(--sab, env(safe-area-inset-bottom, 20px));
+    padding-bottom: var(--sab, constant(safe-area-inset-bottom, 20px));
   }
 
   .mobile-safe-left {

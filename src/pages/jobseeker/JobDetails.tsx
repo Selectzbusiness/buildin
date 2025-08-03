@@ -406,7 +406,7 @@ const JobDetails: React.FC = () => {
                     location: similar.location,
                     type: similar.job_type || 'Not specified',
                     salary: similar.min_amount && similar.max_amount 
-                      ? `$${similar.min_amount.toLocaleString()} - $${similar.max_amount.toLocaleString()}`
+                      ? `₹${similar.min_amount.toLocaleString()} - ₹${similar.max_amount.toLocaleString()}`
                       : 'Salary not specified',
                     description: similar.description || '',
                     postedDate: similar.created_at || new Date().toISOString(),
@@ -433,14 +433,14 @@ const JobDetails: React.FC = () => {
                   <h1 className="text-4xl font-extrabold text-black mb-2 tracking-tight drop-shadow">{job.title}</h1>
                   <div className="text-xl text-gray-800 font-semibold mb-2">{job.companies.name}</div>
                   <div className="flex flex-wrap gap-3 mt-2">
-                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-[#185a9d] px-4 py-2 rounded-full text-sm font-semibold"><FiBriefcase />{job.job_type}</span>
-                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-[#185a9d] px-4 py-2 rounded-full text-sm font-semibold"><FiMapPin />{job.location ? (typeof job.location === 'object' && job.location !== null ? [(job.location as any).city, (job.location as any).area].filter(Boolean).join(', ') : job.location) : 'Not specified'}</span>
+                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-black px-4 py-2 rounded-full text-sm font-semibold"><FiBriefcase />{job.job_type}</span>
+                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-black px-4 py-2 rounded-full text-sm font-semibold"><FiMapPin />{job.location ? (typeof job.location === 'object' && job.location !== null ? [(job.location as any).city, (job.location as any).area].filter(Boolean).join(', ') : job.location) : 'Not specified'}</span>
                     {typeof job.min_amount === 'number' && typeof job.max_amount === 'number' && (
-                      <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-[#185a9d] px-4 py-2 rounded-full text-sm font-semibold"><FiDollarSign />${job.min_amount.toLocaleString()} - ${job.max_amount.toLocaleString()}</span>
+                      <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-black px-4 py-2 rounded-full text-sm font-semibold">₹{job.min_amount.toLocaleString()} - ₹{job.max_amount.toLocaleString()}</span>
                     )}
-                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-[#185a9d] px-4 py-2 rounded-full text-sm font-semibold"><FiClock />{postedDate}</span>
-                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-[#185a9d] px-4 py-2 rounded-full text-sm font-semibold"><FiUsers />{openings} Openings</span>
-                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-[#185a9d] px-4 py-2 rounded-full text-sm font-semibold"><FiUserCheck />{applicants}+ Applicants</span>
+                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-black px-4 py-2 rounded-full text-sm font-semibold"><FiClock />{postedDate}</span>
+                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-black px-4 py-2 rounded-full text-sm font-semibold"><FiUsers />{openings} Openings</span>
+                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-black px-4 py-2 rounded-full text-sm font-semibold"><FiUserCheck />{applicants}+ Applicants</span>
                   </div>
                 </div>
               </div>
@@ -591,7 +591,7 @@ const JobDetails: React.FC = () => {
                       location: similar.location,
                       type: similar.job_type || 'Not specified',
                       salary: similar.min_amount && similar.max_amount 
-                        ? `$${similar.min_amount.toLocaleString()} - $${similar.max_amount.toLocaleString()}`
+                        ? `₹${similar.min_amount.toLocaleString()} - ₹${similar.max_amount.toLocaleString()}`
                         : 'Salary not specified',
                       description: similar.description || '',
                       postedDate: similar.created_at || new Date().toISOString(),

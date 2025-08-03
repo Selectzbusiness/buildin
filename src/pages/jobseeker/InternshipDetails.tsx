@@ -395,12 +395,12 @@ const InternshipDetails: React.FC = () => {
                   <h1 className="text-4xl font-extrabold text-black mb-2 tracking-tight drop-shadow">{internship.title}</h1>
                   <div className="text-xl text-gray-800 font-semibold mb-2">{internship.companies?.name || 'Company Name'}</div>
                   <div className="flex flex-wrap gap-3 mt-2">
-                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-[#185a9d] px-4 py-2 rounded-full text-sm font-semibold"><FiBriefcase />{internship.type}</span>
-                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-[#185a9d] px-4 py-2 rounded-full text-sm font-semibold"><FiMapPin />{internship.location ? (typeof internship.location === 'object' && internship.location !== null ? [(internship.location as any).city, (internship.location as any).area].filter(Boolean).join(', ') : internship.location) : 'Not specified'}</span>
-                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-[#185a9d] px-4 py-2 rounded-full text-sm font-semibold"><FaRupeeSign />{formatStipend(internship.stipend)}</span>
-                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-[#185a9d] px-4 py-2 rounded-full text-sm font-semibold"><FiClock />{postedDate}</span>
-                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-[#185a9d] px-4 py-2 rounded-full text-sm font-semibold"><FiUsers />{openings} Openings</span>
-                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-[#185a9d] px-4 py-2 rounded-full text-sm font-semibold"><FiUserCheck />{applicants}+ Applicants</span>
+                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-black px-4 py-2 rounded-full text-sm font-semibold"><FiBriefcase />{internship.type}</span>
+                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-black px-4 py-2 rounded-full text-sm font-semibold"><FiMapPin />{internship.location ? (typeof internship.location === 'object' && internship.location !== null ? [(internship.location as any).city, (internship.location as any).area].filter(Boolean).join(', ') : internship.location) : 'Not specified'}</span>
+                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-black px-4 py-2 rounded-full text-sm font-semibold">{formatStipend(internship.stipend)}</span>
+                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-black px-4 py-2 rounded-full text-sm font-semibold"><FiClock />{postedDate}</span>
+                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-black px-4 py-2 rounded-full text-sm font-semibold"><FiUsers />{openings} Openings</span>
+                    <span className="inline-flex items-center gap-1 bg-[#e3f0fa] text-black px-4 py-2 rounded-full text-sm font-semibold"><FiUserCheck />{applicants}+ Applicants</span>
                   </div>
                 </div>
               </div>

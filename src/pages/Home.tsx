@@ -7,7 +7,7 @@ import NotificationCenter from '../components/NotificationCenter';
 import JobCardNew from '../components/JobCardNew';
 import { InternshipCard } from '../components/InternshipCard';
 import useIsMobile from '../hooks/useIsMobile';
-import { FiFilter, FiSearch, FiMapPin, FiBriefcase, FiUsers } from 'react-icons/fi';
+import { FiFilter, FiSearch, FiMapPin, FiBriefcase, FiUsers, FiMic, FiBookOpen, FiStar, FiTrendingUp, FiClock } from 'react-icons/fi';
 import { useJobs } from '../contexts/JobsContext';
 import VideoVerifiedTag from '../components/VideoVerifiedTag';
 
@@ -84,7 +84,6 @@ const Home: React.FC = () => {
   const isMobile = useIsMobile();
   const [showMobileSearchModal, setShowMobileSearchModal] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState<'foryou' | 'jobs' | 'internships'>('foryou');
-  // Mobile search modal state
   const [modalType, setModalType] = useState<'jobs' | 'internships'>('jobs');
   const [modalDesignation, setModalDesignation] = useState('');
   const [modalLocation, setModalLocation] = useState('');
@@ -113,7 +112,45 @@ const Home: React.FC = () => {
     postedDate: ''
   });
 
-  const [showMobileFilterModal, setShowMobileFilterModal] = useState(false);
+  // Sample courses data for horizontal scroll
+  const featuredCourses = [
+    {
+      id: 1,
+      title: "Web Development",
+      provider: "Coursera",
+      rating: 4.8,
+      students: "12.5K",
+      price: "₹2,999",
+      image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=200&h=120&fit=crop"
+    },
+    {
+      id: 2,
+      title: "Data Science",
+      provider: "Udemy",
+      rating: 4.6,
+      students: "8.9K",
+      price: "₹1,499",
+      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=200&h=120&fit=crop"
+    },
+    {
+      id: 3,
+      title: "Digital Marketing",
+      provider: "Google",
+      rating: 4.9,
+      students: "15.2K",
+      price: "Free",
+      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=200&h=120&fit=crop"
+    },
+    {
+      id: 4,
+      title: "UI/UX Design",
+      provider: "Figma",
+      rating: 4.7,
+      students: "6.8K",
+      price: "₹3,999",
+      image: "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=200&h=120&fit=crop"
+    }
+  ];
 
   // Mobile filter bar options - dynamically generated from real data
   const filterOptions = [
@@ -451,411 +488,337 @@ const Home: React.FC = () => {
 
   return (
     <>
-      {/* Header Section with Search */}
-      <div className="relative">
-        {/* Mobile Search Bar - Airbnb Style */}
-        {isMobile && (
-          <>
-            {/* Minimalist Hero Section: Light blue, rounded, only around the search bar */}
-            <div className="w-full flex flex-col items-center mt-4 mb-4">
-              <div className="max-w-md w-full bg-blue-50 rounded-3xl shadow-lg px-3 py-3 mx-auto" style={{marginBottom: '1.5rem'}}>
-                {/* Airbnb-style Search Bar */}
-                <div className="w-full flex items-center justify-center">
-                  <div 
-                    className="bg-white rounded-2xl shadow-2xl border border-white/20 backdrop-blur-sm cursor-pointer transform transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] w-full"
-                    onClick={() => setShowMobileSearchModal(true)}
-                    style={{ minHeight: '56px' }}
-                  >
-                    <div className="flex items-center p-4">
-                      <div className="flex-shrink-0 mr-4">
-                        <div className="w-10 h-10 bg-ocean-dark rounded-full flex items-center justify-center">
-                          <FiSearch className="w-5 h-5 text-white" />
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col">
-                          <span className={`text-base font-semibold ${searchTerm ? 'text-gray-900' : 'text-gray-500'} truncate`}>
-                            {searchTerm || 'What role are you looking for?'}
-                          </span>
-                          <span className={`text-sm ${locationTerm ? 'text-gray-700' : 'text-gray-400'} truncate`}>
-                            {locationTerm || 'Add location'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex-shrink-0 ml-3">
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                          <FiFilter className="w-4 h-4 text-gray-600" />
-                        </div>
-                      </div>
-                    </div>
+      {/* Mobile Design */}
+      {isMobile && (
+        <div className="min-h-screen bg-gray-50">
+          {/* Header */}
+          <div className="bg-white shadow-sm border-b border-gray-100">
+            <div className="px-4 py-3">
+              {/* App Branding */}
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Selectz</h1>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <FiMapPin className="w-4 h-4 mr-1" />
+                    <span>Mumbai, Maharashtra</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                    <FiUsers className="w-5 h-5 text-gray-600" />
+                  </button>
+                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center text-white font-semibold">
+                    {user?.email?.[0]?.toUpperCase() || 'U'}
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Mobile Search Modal - Enhanced */}
-            {showMobileSearchModal && (
-              <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end justify-center animate-fade-in">
-                <div className="bg-white rounded-t-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-                  {/* Modal Header */}
-                  <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 z-20">
+              {/* Search Bar */}
+              <div className="relative">
+                <div className="flex items-center bg-white border-2 border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+                  <FiSearch className="w-5 h-5 text-gray-400 mr-3" />
+                  <input
+                    type="text"
+                    placeholder="Search jobs by city, skills, or company"
+                    className="flex-1 text-gray-900 placeholder-gray-500 outline-none"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onFocus={() => setShowMobileSearchModal(true)}
+                  />
+                  <button className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                    <FiMic className="w-4 h-4 text-white" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Courses Section */}
+          <div className="px-4 py-4 bg-white">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-gray-900">Featured Courses</h2>
+              <button className="text-sm text-green-600 font-medium">View All</button>
+            </div>
+            <div className="flex space-x-4 overflow-x-auto pb-2">
+              {featuredCourses.map((course) => (
+                <div key={course.id} className="flex-shrink-0 w-64 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                  <img src={course.image} alt={course.title} className="w-full h-32 object-cover" />
+                  <div className="p-3">
+                    <h3 className="font-semibold text-gray-900 text-sm mb-1">{course.title}</h3>
+                    <p className="text-xs text-gray-600 mb-2">{course.provider}</p>
                     <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-bold text-gray-900">Search Opportunities</h2>
-                      <button
-                        className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
-                        onClick={() => setShowMobileSearchModal(false)}
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                  {/* Modal Content (scrollable) */}
-                  <div className="px-6 py-4 space-y-6 overflow-y-auto flex-1">
-                    {/* Type Selector */}
-                    <div className="flex bg-gray-100 rounded-2xl p-1">
-                      {['jobs', 'internships'].map(type => (
-                        <button
-                          key={type}
-                          className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200 ${
-                            modalType === type 
-                              ? 'bg-white text-ocean-dark shadow-sm' 
-                              : 'text-gray-600 hover:text-gray-900'
-                          }`}
-                          onClick={() => setModalType(type as 'jobs' | 'internships')}
-                        >
-                          {type.charAt(0).toUpperCase() + type.slice(1)}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Search Fields */}
-                    <div className="space-y-4">
-                      {/* Role/Designation Field */}
-                      <div className="relative">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          <FiBriefcase className="inline w-4 h-4 mr-1" />
-                          Role or Skills
-                        </label>
-                        <div className="relative">
-                          <input
-                            className="w-full px-4 py-4 rounded-xl border-2 border-gray-200 bg-gray-50 text-base placeholder-gray-400 focus:ring-2 focus:ring-ocean-dark focus:border-ocean-dark transition-all"
-                            placeholder="e.g., Software Engineer, React, Marketing"
-                            value={modalDesignation}
-                            onChange={e => { setModalDesignation(e.target.value); setShowDesignationSuggestions(true); }}
-                            onFocus={() => setShowDesignationSuggestions(true)}
-                            onBlur={() => setTimeout(() => setShowDesignationSuggestions(false), 100)}
-                            autoFocus
-                          />
-                          {modalDesignation && (
-                            <button
-                              className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-300 transition-colors"
-                              onClick={() => setModalDesignation('')}
-                            >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-                        
-                        {/* Suggestions Dropdown */}
-                        {showDesignationSuggestions && filteredDesignationSuggestions.length > 0 && (
-                          <div className="absolute z-50 w-full bg-white border-2 border-ocean-dark rounded-xl shadow-xl mt-1 max-h-48 overflow-y-auto">
-                            {filteredDesignationSuggestions.map((suggestion, i) => (
-                              <div
-                                key={i}
-                                className="px-4 py-3 hover:bg-ocean-dark/5 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
-                                onMouseDown={() => { setModalDesignation(suggestion); setShowDesignationSuggestions(false); }}
-                              >
-                                {suggestion}
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                      <div className="flex items-center">
+                        <FiStar className="w-3 h-3 text-yellow-400 mr-1" />
+                        <span className="text-xs text-gray-600">{course.rating}</span>
+                        <span className="text-xs text-gray-500 ml-1">({course.students})</span>
                       </div>
-
-                      {/* Location Field */}
-                      <div className="relative">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          <FiMapPin className="inline w-4 h-4 mr-1" />
-                          Location
-                        </label>
-                        <div className="relative">
-                          <input
-                            className="w-full px-4 py-4 rounded-xl border-2 border-gray-200 bg-gray-50 text-base placeholder-gray-400 focus:ring-2 focus:ring-ocean-dark focus:border-ocean-dark transition-all"
-                            placeholder="e.g., Mumbai, Remote, Hybrid"
-                            value={modalLocation}
-                            onChange={e => { setModalLocation(e.target.value); setShowLocationSuggestions(true); }}
-                            onFocus={() => setShowLocationSuggestions(true)}
-                            onBlur={() => setTimeout(() => setShowLocationSuggestions(false), 100)}
-                          />
-                          {modalLocation && (
-                            <button
-                              className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-300 transition-colors"
-                              onClick={() => setModalLocation('')}
-                            >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-                        
-                        {/* Location Suggestions */}
-                        {showLocationSuggestions && filteredLocationSuggestions.length > 0 && (
-                          <div className="absolute z-50 w-full bg-white border-2 border-ocean-dark rounded-xl shadow-xl mt-1 max-h-48 overflow-y-auto">
-                            {filteredLocationSuggestions.map((suggestion, i) => (
-                              <div
-                                key={i}
-                                className="px-4 py-3 hover:bg-ocean-dark/5 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
-                                onMouseDown={() => { setModalLocation(suggestion); setShowLocationSuggestions(false); }}
-                              >
-                                {suggestion}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      <span className="text-sm font-semibold text-green-600">{course.price}</span>
                     </div>
-
-                    {/* Recent Searches */}
-                    {recentSearches.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-700 mb-3">Recent Searches</h3>
-                        <div className="space-y-2">
-                          {recentSearches.map((search, i) => (
-                            <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200">
-                              <button
-                                className="flex-1 flex items-center text-left gap-3"
-                                onClick={() => {
-                                  setModalDesignation(search.designation);
-                                  setModalLocation(search.location);
-                                  setModalType(search.type as 'jobs' | 'internships');
-                                }}
-                              >
-                                <div className="w-8 h-8 bg-ocean-dark/10 rounded-full flex items-center justify-center">
-                                  <FiSearch className="w-4 h-4 text-ocean-dark" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-gray-900 truncate">{search.designation || 'Any role'}</div>
-                                  {search.location && <div className="text-sm text-gray-500">in {search.location}</div>}
-                                </div>
-                                <span className="text-xs px-2 py-1 rounded-full bg-ocean-dark/10 text-ocean-dark font-medium">
-                                  {search.type.charAt(0).toUpperCase() + search.type.slice(1)}
-                                </span>
-                              </button>
-                              <button
-                                className="ml-2 w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 hover:bg-red-100 hover:text-red-500 transition-colors"
-                                onClick={() => {
-                                  const updated = recentSearches.filter((_, idx) => idx !== i);
-                                  setRecentSearches(updated);
-                                  localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
-                                }}
-                              >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {/* Sticky Search Button */}
-                  <div className="px-6 pb-6 bg-white sticky bottom-0 z-30">
-                    <button
-                      className="w-full bg-gradient-to-r from-ocean-dark to-ocean-light hover:from-ocean-light hover:to-ocean-dark text-white rounded-xl py-4 font-bold text-base flex items-center justify-center gap-2 shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
-                      onClick={() => {
-                        setActiveMobileTab(modalType);
-                        setSearchTerm(modalDesignation);
-                        setLocationTerm(modalLocation);
-                        setShowMobileSearchModal(false);
-                        saveRecentSearch(modalDesignation, modalLocation, modalType);
-                      }}
-                    >
-                      <FiSearch className="w-5 h-5" />
-                      Search {modalType === 'jobs' ? 'Jobs' : 'Internships'}
-                    </button>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* Enhanced Mobile Tabs */}
-            <div className="bg-white border-b border-gray-100 sticky top-0 z-30">
-              <div className="flex justify-center items-center px-4 py-3">
-                <div className="flex bg-gray-100 rounded-2xl p-1 w-full max-w-sm">
-                  {[
-                    { key: 'foryou', label: 'For You', icon: '⭐' },
-                    { key: 'jobs', label: 'Jobs', icon: '💼' },
-                    { key: 'internships', label: 'Internships', icon: '🎓' }
-                  ].map(tab => (
-                    <button
-                      key={tab.key}
-                      className={`flex-1 py-2 px-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-1 ${
-                        activeMobileTab === tab.key 
-                          ? 'bg-white text-ocean-dark shadow-sm' 
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                      onClick={() => setActiveMobileTab(tab.key as 'foryou' | 'jobs' | 'internships')}
-                    >
-                      <span className="text-xs">{tab.icon}</span>
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
+          </div>
 
-            {/* Enhanced Mobile Filters Bar */}
-            <div className="bg-white border-b border-gray-100 sticky top-[60px] z-20">
-              <div className="flex items-center gap-3 px-4 py-3 overflow-x-auto">
-                <button
-                  className={`flex items-center justify-center w-10 h-10 rounded-full border transition-colors flex-shrink-0 ${
-                    showMobileFilterModal || Object.values(filters).some(value => value)
-                      ? 'bg-ocean-dark/10 text-ocean-dark border-ocean-dark/20 hover:bg-ocean-dark/20'
-                      : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
-                  }`}
-                  onClick={() => setShowMobileFilterModal(true)}
-                >
-                  <FiFilter className="w-5 h-5" />
-                </button>
-                
-                {/* Active Filters */}
-                {Object.entries(filters).map(([key, value]) => value && (
-                  <span key={key} className="bg-ocean-dark/10 text-ocean-dark rounded-full px-3 py-1 text-xs font-medium border border-ocean-dark/20 whitespace-nowrap flex-shrink-0 flex items-center gap-1">
-                    {filterOptions.find(opt => opt.key === key)?.label || key}: {value}
-                    <button
-                      type="button"
-                      className="ml-1 w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-100 hover:text-red-500 transition-colors"
-                      aria-label={`Remove ${key} filter`}
-                      onClick={() => setFilters(f => ({ ...f, [key]: '' }))}
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </span>
+          {/* Category Tabs */}
+          <div className="bg-white border-b border-gray-100">
+            <div className="flex justify-center px-4 py-3">
+              <div className="flex bg-gray-100 rounded-2xl p-1 w-full max-w-sm">
+                {[
+                  { key: 'foryou', label: 'For You', icon: FiStar },
+                  { key: 'jobs', label: 'Jobs', icon: FiBriefcase },
+                  { key: 'internships', label: 'Internships', icon: FiBookOpen }
+                ].map(tab => (
+                  <button
+                    key={tab.key}
+                    className={`flex-1 py-2 px-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-1 ${
+                      activeMobileTab === tab.key 
+                        ? 'bg-white text-green-600 shadow-sm' 
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                    onClick={() => setActiveMobileTab(tab.key as any)}
+                  >
+                    <tab.icon className="w-4 h-4" />
+                    {tab.label}
+                  </button>
                 ))}
               </div>
             </div>
+          </div>
 
-            {/* Enhanced Mobile Filter Modal */}
-            {showMobileFilterModal && (
-              <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end justify-center">
-                <div className="bg-white rounded-t-3xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-                  <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-bold text-gray-900">Filters</h2>
-                      <button
-                        className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
-                        onClick={() => setShowMobileFilterModal(false)}
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
+          {/* Filter Bar */}
+          <div className="bg-white px-4 py-3 border-b border-gray-100">
+            <div className="flex items-center space-x-3 overflow-x-auto">
+              <button className="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded-full text-sm font-medium text-gray-700 whitespace-nowrap">
+                <FiFilter className="w-4 h-4" />
+                Filters
+              </button>
+              <button className="px-3 py-2 bg-gray-100 rounded-full text-sm font-medium text-gray-700 whitespace-nowrap">
+                Posted in
+              </button>
+              <button className="px-3 py-2 bg-gray-100 rounded-full text-sm font-medium text-gray-700 whitespace-nowrap">
+                Distance
+              </button>
+              <button className="px-3 py-2 bg-gray-100 rounded-full text-sm font-medium text-gray-700 whitespace-nowrap">
+                Salary
+              </button>
+            </div>
+          </div>
+
+          {/* Job Listings */}
+          <div className="px-4 py-4">
+            {loading ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-2xl p-4 animate-pulse border border-gray-100">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                      </div>
                     </div>
                   </div>
-                  <div className="px-6 py-4 space-y-6 max-h-[48vh] overflow-y-auto flex-1">
-                    {filterOptions.map(opt => (
-                      <div key={opt.key}>
-                        <div className="font-semibold text-gray-900 mb-3">{opt.label}</div>
-                        <div className="flex flex-wrap gap-2">
-                          {opt.values.map(val => (
-                            <button
-                              key={val}
-                              type="button"
-                              className={`px-4 py-2 rounded-full border-2 text-sm font-medium transition-all duration-200 ${
-                                filters[opt.key] === val 
-                                  ? 'bg-ocean-dark text-white border-ocean-dark' 
-                                  : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-ocean-dark/50'
-                              }`}
-                              onClick={() => setFilters(f => ({ ...f, [opt.key]: f[opt.key] === val ? '' : val }))}
-                            >
-                              {val}
-                            </button>
-                          ))}
+                ))}
+              </div>
+            ) : filteredMobileData.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FiSearch className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No results found</h3>
+                <p className="text-gray-500">Try adjusting your search criteria or filters</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredMobileData.map((item: CombinedOpportunity) => (
+                  <div key={item.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                    <div className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                            <span className="text-lg font-semibold text-gray-600">
+                              {item.company?.[0] || 'C'}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 text-base mb-1">{item.title}</h3>
+                            <p className="text-sm text-gray-600">{item.company}</p>
+                          </div>
                         </div>
+                        <button className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                          <FiTrendingUp className="w-4 h-4 text-gray-600" />
+                        </button>
                       </div>
-                    ))}
+                      
+                      <div className="flex items-center text-sm text-gray-600 mb-3">
+                        <FiMapPin className="w-4 h-4 mr-1" />
+                        <span>{formatLocation(item.location)}</span>
+                      </div>
+                      
+                      <div className="flex items-center text-sm text-gray-600 mb-3">
+                        <span className="font-medium">₹{item.salary?.replace(/[^\d,-]/g, '') || 'Not specified'}</span>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                          {item.type}
+                        </span>
+                        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                          {item.experience || 'Any Experience'}
+                        </span>
+                        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                          {item.postType}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center text-xs text-gray-500">
+                          <FiClock className="w-3 h-3 mr-1" />
+                          <span>Posted {new Date(item.postedDate).toLocaleDateString()}</span>
+                        </div>
+                        <button 
+                          className="px-4 py-2 bg-green-600 text-white rounded-full text-sm font-medium"
+                          onClick={() => navigate(`/${item.postType.toLowerCase()}s/${item.id}`)}
+                        >
+                          Apply Now
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex gap-3 pt-4 border-t border-gray-100 px-6 pb-6 bg-white sticky bottom-0">
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Search Modal */}
+          {showMobileSearchModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
+              <div className="bg-white w-full h-[90vh] rounded-t-3xl flex flex-col">
+                {/* Modal Header */}
+                <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 z-20">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-gray-900">Search Opportunities</h2>
                     <button
-                      type="button"
-                      className="flex-1 px-4 py-3 rounded-xl bg-gray-100 text-gray-700 font-semibold border border-gray-200 hover:bg-gray-200 transition-colors"
-                      onClick={() => setFilters({ jobType: '', company: '', experienceLevel: '', salaryRange: '', remoteWork: '', industry: '', postedDate: '' })}
+                      className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+                      onClick={() => setShowMobileSearchModal(false)}
                     >
-                      Clear All
-                    </button>
-                    <button
-                      type="button"
-                      className="flex-1 px-4 py-3 rounded-xl bg-ocean-dark text-white font-semibold shadow-lg hover:bg-ocean-light transition-colors"
-                      onClick={() => setShowMobileFilterModal(false)}
-                    >
-                      Apply Filters
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
                     </button>
                   </div>
                 </div>
-              </div>
-            )}
+                
+                {/* Modal Content */}
+                <div className="px-6 py-4 space-y-6 overflow-y-auto flex-1">
+                  {/* Type Selector */}
+                  <div className="flex bg-gray-100 rounded-2xl p-1">
+                    {['jobs', 'internships'].map(type => (
+                      <button
+                        key={type}
+                        className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                          modalType === type 
+                            ? 'bg-white text-green-600 shadow-sm' 
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                        onClick={() => setModalType(type as 'jobs' | 'internships')}
+                      >
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </button>
+                    ))}
+                  </div>
 
-            {/* Enhanced Mobile Content */}
-            <div className="bg-gray-50 min-h-screen">
-              <div className="max-w-md mx-auto py-4 px-4">
-                {loading ? (
+                  {/* Search Fields */}
                   <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="bg-white rounded-2xl p-4 animate-pulse">
-                        <div className="flex items-start space-x-4">
-                          <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
-                          <div className="flex-1 space-y-2">
-                            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                            <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : filteredMobileData.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-ocean-dark/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <FiSearch className="w-8 h-8 text-ocean-dark" />
+                    <div className="relative">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <FiBriefcase className="inline w-4 h-4 mr-1" />
+                        Role or Skills
+                      </label>
+                      <input
+                        className="w-full px-4 py-4 rounded-xl border-2 border-gray-200 bg-gray-50 text-base placeholder-gray-400 focus:ring-2 focus:ring-green-600 focus:border-green-600 transition-all"
+                        placeholder="e.g., Software Engineer, React, Marketing"
+                        value={modalDesignation}
+                        onChange={e => setModalDesignation(e.target.value)}
+                        autoFocus
+                      />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No results found</h3>
-                    <p className="text-gray-500">Try adjusting your search criteria or filters</p>
+
+                    <div className="relative">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <FiMapPin className="inline w-4 h-4 mr-1" />
+                        Location
+                      </label>
+                      <input
+                        className="w-full px-4 py-4 rounded-xl border-2 border-gray-200 bg-gray-50 text-base placeholder-gray-400 focus:ring-2 focus:ring-green-600 focus:border-green-600 transition-all"
+                        placeholder="e.g., Mumbai, Remote, Hybrid"
+                        value={modalLocation}
+                        onChange={e => setModalLocation(e.target.value)}
+                      />
+                    </div>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {filteredMobileData.map((item: CombinedOpportunity) => (
-                      <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transform transition-all duration-200 hover:shadow-md hover:scale-[1.01]">
-                        {item.postType === 'Job' ? (
-                          <JobCardNew job={item as any} />
-                        ) : (
-                          <InternshipCard internship={{
-                            ...(item as any),
-                            internship_type: String((item as any).internship_type ?? (item as any).type ?? ''),
-                            stipend_type: String((item as any).stipend_type ?? ''),
-                            min_amount: typeof (item as any).min_amount === 'number' ? (item as any).min_amount : 0,
-                            max_amount: typeof (item as any).max_amount === 'number' ? (item as any).max_amount : 0,
-                            duration: String((item as any).duration || ''),
-                          }} />
-                        )}
+
+                  {/* Recent Searches */}
+                  {recentSearches.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700 mb-3">Recent Searches</h3>
+                      <div className="space-y-2">
+                        {recentSearches.map((search, i) => (
+                          <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200">
+                            <button
+                              className="flex-1 flex items-center text-left gap-3"
+                              onClick={() => {
+                                setModalDesignation(search.designation);
+                                setModalLocation(search.location);
+                                setModalType(search.type as 'jobs' | 'internships');
+                              }}
+                            >
+                              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                <FiSearch className="w-4 h-4 text-green-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 truncate">{search.designation || 'Any role'}</div>
+                                {search.location && <div className="text-sm text-gray-500">in {search.location}</div>}
+                              </div>
+                              <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-600 font-medium">
+                                {search.type.charAt(0).toUpperCase() + search.type.slice(1)}
+                              </span>
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Search Button */}
+                <div className="px-6 pb-6 bg-white sticky bottom-0 z-30">
+                  <button
+                    className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-4 font-bold text-base flex items-center justify-center gap-2 shadow-lg transition-all duration-300"
+                    onClick={() => {
+                      setActiveMobileTab(modalType);
+                      setSearchTerm(modalDesignation);
+                      setLocationTerm(modalLocation);
+                      setShowMobileSearchModal(false);
+                      saveRecentSearch(modalDesignation, modalLocation, modalType);
+                    }}
+                  >
+                    <FiSearch className="w-5 h-5" />
+                    Search {modalType === 'jobs' ? 'Jobs' : 'Internships'}
+                  </button>
+                </div>
               </div>
             </div>
-          </>
-        )}
+          )}
+        </div>
+      )}
 
-        {/* Desktop Search Bar - Keep existing */}
-        {!isMobile && (
+      {/* Desktop Design - Keep existing */}
+      {!isMobile && (
+        <>
+          {/* Desktop Search Bar */}
           <div className="w-full max-w-xl mx-auto hidden md:flex flex-row items-center gap-4 mt-6">
             <form className="flex-1 flex items-center" onSubmit={handleSearchSubmit}>
               <div
@@ -902,25 +865,25 @@ const Home: React.FC = () => {
               Filters
             </button>
           </div>
-        )}
-        
-        {/* Advanced Search Dropdown/Panel - now always below the search bar row */}
-        {showAdvancedSearch && (
-          <div ref={filterPanelRef} className="w-full max-w-2xl mx-auto mt-3 hidden md:block">
-            <AdvancedSearch
-              filters={filters}
-              onChange={handleFilterChange as any}
-              onSearch={handleFilterApply}
-              onReset={handleFilterReset}
-              isOpen={showAdvancedSearch}
-              onToggle={handleFilterApply}
-              showJobTypeFilter={true}
-            />
-          </div>
-        )}
-      </div>
+          
+          {/* Advanced Search Dropdown/Panel */}
+          {showAdvancedSearch && (
+            <div ref={filterPanelRef} className="w-full max-w-2xl mx-auto mt-3 hidden md:block">
+              <AdvancedSearch
+                filters={filters}
+                onChange={handleFilterChange as any}
+                onSearch={handleFilterApply}
+                onReset={handleFilterReset}
+                isOpen={showAdvancedSearch}
+                onToggle={handleFilterApply}
+                showJobTypeFilter={true}
+              />
+            </div>
+          )}
+        </>
+      )}
 
-      {/* Main Content - now full width and more responsive */}
+      {/* Desktop Main Content */}
       {!isMobile && (
         <div className="w-full px-2 sm:px-4 md:px-8 lg:px-16 xl:px-24 py-8">
           <div className="flex flex-col lg:flex-row gap-8">
@@ -938,12 +901,11 @@ const Home: React.FC = () => {
                       </div>
                     ))}
                   </div>
-                ) : error ? (
-                  <div className="text-center text-red-600 py-4">{error}</div>
+                ) : jobsError ? (
+                  <div className="text-center text-red-600 py-4">{jobsError}</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {filteredJobsAndInternships.map((item) => {
-                      // Always pass skills as an array of strings
+                    {jobsAndInternships.slice(0, 6).map((item) => {
                       const skills = Array.isArray(item.requirements)
                         ? item.requirements.map(r =>
                             typeof r === 'string'
@@ -1000,7 +962,7 @@ const Home: React.FC = () => {
               <section className="bg-white rounded-2xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Featured Companies</h3>
                 <div className="space-y-4">
-                  {companies.map((company) => (
+                  {companies.slice(0, 5).map((company) => (
                     <div key={company.id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-blue-50 transition-colors">
                       {company.logo_url && <img src={company.logo_url} alt={company.name} className="w-12 h-12 rounded-full object-cover border border-gray-200" />}
                       <div className="flex-1">

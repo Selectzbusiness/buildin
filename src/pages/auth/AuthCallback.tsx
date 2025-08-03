@@ -60,14 +60,13 @@ const AuthCallback: React.FC = () => {
           // Refresh the auth context
           await refreshProfile(session);
 
-          // Redirect based on user role
-          const { data: userProfile } = await supabase
-            .from('profiles')
-            .select('roles')
-            .eq('auth_id', session.user.id)
-            .single();
+          // Check if they have employer access by looking for company associations
+          const { data: employerLinks, error: employerLinkError } = await supabase
+            .from('employer_companies')
+            .select('company_id')
+            .eq('user_id', session.user.id);
 
-          if (userProfile?.roles?.includes('employer')) {
+          if (!employerLinkError && employerLinks && employerLinks.length > 0) {
             // Check if they have company details
             const { data: links, error: linkError } = await supabase
               .from('employer_companies')

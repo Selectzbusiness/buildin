@@ -80,22 +80,54 @@ const Applications: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [messageTargetId, setMessageTargetId] = useState<string | null>(null);
+  const [hasEmployerAccess, setHasEmployerAccess] = useState<boolean | null>(null);
   const isMobile = useIsMobile();
+
+  // Check if user has employer access by looking for company associations
+  useEffect(() => {
+    const checkEmployerAccess = async () => {
+      if (!profile) {
+        setHasEmployerAccess(false);
+        return;
+      }
+      
+      try {
+        const { data: links, error } = await supabase
+          .from('employer_companies')
+          .select('company_id')
+          .eq('user_id', profile.auth_id || profile.user_id);
+        
+        if (error) {
+          console.error('Error checking employer access:', error);
+          setHasEmployerAccess(false);
+          return;
+        }
+        
+        setHasEmployerAccess((links || []).length > 0);
+      } catch (err) {
+        console.error('Error checking employer access:', err);
+        setHasEmployerAccess(false);
+      }
+    };
+    
+    checkEmployerAccess();
+  }, [profile]);
 
   useEffect(() => {
     const fetchAllApplications = async () => {
-      if (!profile || !profile.roles?.includes('employer')) {
+      if (!profile) {
         setLoading(false);
         return;
       }
       setLoading(true);
       try {
-        // Fetch all company_ids for this user from employer_companies
+        // Check if user has employer access by looking for company associations
         const { data: links, error: linkError } = await supabase
           .from('employer_companies')
           .select('company_id')
           .eq('user_id', profile.auth_id || profile.user_id);
         if (linkError) {
+          console.error('Error checking employer access:', linkError);
           setApplications([]);
           setInternshipApplications([]);
           setLoading(false);
@@ -103,6 +135,7 @@ const Applications: React.FC = () => {
         }
         const companyIds = (links || []).map((l: any) => l.company_id);
         if (companyIds.length === 0) {
+          // User doesn't have any company associations, so they're not an employer
           setApplications([]);
           setInternshipApplications([]);
           setLoading(false);
@@ -432,8 +465,8 @@ const Applications: React.FC = () => {
       </div>
     );
   }
-  
-  if (!profile || !profile.roles?.includes('employer')) {
+
+  if (hasEmployerAccess === false) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#f1f5f9] via-[#e3f0fa] to-[#f4f8fb] p-8">
         <div className="text-center">
@@ -441,7 +474,7 @@ const Applications: React.FC = () => {
             <FaUser className="w-8 h-8 text-gray-600" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
-          <p className="text-gray-500">This page is for employers only.</p>
+          <p className="text-gray-500">This page is for employers only. Please complete your company profile to access employer features.</p>
         </div>
       </div>
     );

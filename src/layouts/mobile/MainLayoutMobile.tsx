@@ -143,27 +143,15 @@ const MainLayoutMobile: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] flex flex-col">
-      {/* Status Bar Spacer */}
-      {isNativePlatform && (
-        <div 
-          className="bg-white" 
-          style={{ height: `${statusBarHeight}px` }}
-        ></div>
-      )}
-      
-      {/* Header with logo and login/signup button for mobile */}
+      {/* Status Bar Spacer for system icons */}
+      <div style={{ height: 'env(safe-area-inset-top, 24px)' }} className="bg-white" />
+      {/* Sticky Header with safe area padding */}
       <div
-        className="flex items-center justify-between px-4 pt-4 pb-2 bg-white border-b border-gray-100"
+        className="sticky top-0 z-50 flex items-center justify-between px-4 py-2 bg-white border-b border-gray-100"
+        style={{ paddingTop: 'env(safe-area-inset-top, 8px)' }}
       >
-        <div className="flex items-center">
-          <img
-            src="/selectz.logo.png"
-            alt="Selectz Logo"
-            className="w-7 h-7 mr-2 object-contain rounded-xl bg-white/20 backdrop-blur-sm shadow"
-            style={{ background: 'rgba(24,90,157,0.08)' }}
-          />
-          <span className="text-lg font-bold text-[#185a9d] tracking-tight">Selectz</span>
-        </div>
+        {/* Removed logo and text for home page only */}
+        <div className="flex items-center"></div>
         <div className="flex items-center gap-2">
           {profile && !!profile.intro_video_url && (
             <VideoVerifiedTag />
@@ -179,7 +167,7 @@ const MainLayoutMobile: React.FC = () => {
         </div>
       </div>
       {/* Main Content - Card style */}
-      <main className="flex-1 pt-2 pb-20 px-2">
+      <main className="flex-1 pb-20 px-2">
         <motion.div
           variants={mainVariants}
           initial={currentInitial}

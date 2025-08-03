@@ -45,13 +45,12 @@ const Login: React.FC = () => {
         }
         // Only redirect if a valid session and user exist
         if (data?.session && data.session.user) {
-          // Check their role and redirect accordingly
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('roles')
-            .eq('id', data.session.user.id)
-            .single();
-          if (profileData?.roles?.includes('employer')) {
+          // Check if they have employer access by looking for company associations
+          const { data: employerLinks, error: employerLinkError } = await supabase
+            .from('employer_companies')
+            .select('company_id')
+            .eq('user_id', data.session.user.id);
+          if (!employerLinkError && employerLinks && employerLinks.length > 0) {
             // Check if they have company details
             const { data: links, error: linkError } = await supabase
               .from('employer_companies')

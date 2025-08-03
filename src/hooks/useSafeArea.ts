@@ -29,8 +29,8 @@ export const useSafeArea = () => {
       const right = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sar') || '0');
 
       return {
-        top: top || (isNative ? 44 : 0), // Default to 44px for native, 0 for web
-        bottom: bottom || (isNative ? 34 : 0), // Default to 34px for native, 0 for web
+        top: top || (isNative ? 24 : 0), // Default to 24px for native, 0 for web
+        bottom: bottom || (isNative ? 20 : 0), // Default to 20px for native, 0 for web
         left: left || 0,
         right: right || 0
       };

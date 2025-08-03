@@ -408,11 +408,18 @@ const Home: React.FC = () => {
   // Suggestions for search - dynamically generated from real data
   const designationSuggestions = [
     ...Array.from(new Set(jobsAndInternships.map(j => j.title).filter(Boolean))),
+    ...Array.from(new Set(jobsAndInternships.map(j => j.company).filter(Boolean))),
     'Software Engineer', 'Data Scientist', 'Product Manager', 'UX Designer',
     'Marketing Manager', 'Sales Representative', 'Content Writer', 'Graphic Designer',
     'Frontend Developer', 'Backend Developer', 'DevOps Engineer', 'QA Engineer',
     'Business Analyst', 'Project Manager', 'HR Manager', 'Finance Analyst'
   ];
+
+  // Debug: Log data when available
+  if (jobsAndInternships.length > 0) {
+    console.log('Jobs and internships data:', jobsAndInternships.length);
+    console.log('Sample job titles:', jobsAndInternships.slice(0, 3).map(j => j.title));
+  }
 
   const locationSuggestions = [
     ...Array.from(new Set(jobsAndInternships.map(j => formatLocation(j.location)).filter(Boolean))),
@@ -422,10 +429,33 @@ const Home: React.FC = () => {
   ];
 
   const filteredDesignationSuggestions = designationSuggestions.filter(d => 
-    d.toLowerCase().includes(modalDesignation.toLowerCase())
+    d.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredLocationSuggestions = locationSuggestions.filter(l => 
+    l.toLowerCase().includes(locationTerm.toLowerCase())
+  );
+
+  // Debug logging (only when there's input)
+  if (searchTerm || locationTerm) {
+    console.log('Search suggestions debug:', {
+      searchTerm,
+      locationTerm,
+      designationSuggestionsCount: designationSuggestions.length,
+      locationSuggestionsCount: locationSuggestions.length,
+      filteredDesignationCount: filteredDesignationSuggestions.length,
+      filteredLocationCount: filteredLocationSuggestions.length,
+      showDesignationSuggestions,
+      showLocationSuggestions
+    });
+  }
+
+  // Mobile modal suggestions (separate from desktop)
+  const filteredModalDesignationSuggestions = designationSuggestions.filter(d => 
+    d.toLowerCase().includes(modalDesignation.toLowerCase())
+  );
+
+  const filteredModalLocationSuggestions = locationSuggestions.filter(l => 
     l.toLowerCase().includes(modalLocation.toLowerCase())
   );
 
@@ -742,8 +772,31 @@ const Home: React.FC = () => {
                         placeholder="e.g., Software Engineer, React, Marketing"
                         value={modalDesignation}
                         onChange={e => setModalDesignation(e.target.value)}
+                        onFocus={() => setShowDesignationSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowDesignationSuggestions(false), 200)}
                         autoFocus
                       />
+                      {/* Mobile Designation Suggestions */}
+                      {showDesignationSuggestions && modalDesignation && filteredModalDesignationSuggestions.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-40 overflow-y-auto">
+                          {filteredModalDesignationSuggestions.slice(0, 4).map((suggestion, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors duration-150 text-gray-700"
+                              onClick={() => {
+                                setModalDesignation(suggestion);
+                                setShowDesignationSuggestions(false);
+                              }}
+                            >
+                              <div className="flex items-center">
+                                <FiBriefcase className="w-4 h-4 text-gray-400 mr-3" />
+                                <span className="truncate">{suggestion}</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="relative">
@@ -756,7 +809,30 @@ const Home: React.FC = () => {
                         placeholder="e.g., Mumbai, Remote, Hybrid"
                         value={modalLocation}
                         onChange={e => setModalLocation(e.target.value)}
+                        onFocus={() => setShowLocationSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowLocationSuggestions(false), 200)}
                       />
+                      {/* Mobile Location Suggestions */}
+                      {showLocationSuggestions && modalLocation && filteredModalLocationSuggestions.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-40 overflow-y-auto">
+                          {filteredModalLocationSuggestions.slice(0, 4).map((suggestion, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors duration-150 text-gray-700"
+                              onClick={() => {
+                                setModalLocation(suggestion);
+                                setShowLocationSuggestions(false);
+                              }}
+                            >
+                              <div className="flex items-center">
+                                <FiMapPin className="w-4 h-4 text-gray-400 mr-3" />
+                                <span className="truncate">{suggestion}</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -828,21 +904,76 @@ const Home: React.FC = () => {
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setIsSearchFocused(false)}
               >
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  placeholder="Search jobs, companies, or keywords..."
-                  className="flex-1 px-6 py-3 bg-transparent outline-none text-gray-900 text-base rounded-full placeholder-gray-400"
-                />
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    placeholder="Search jobs, companies, or keywords..."
+                    className="w-full px-6 py-3 bg-transparent outline-none text-gray-900 text-base rounded-full placeholder-gray-400"
+                    onFocus={() => setShowDesignationSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowDesignationSuggestions(false), 200)}
+                  />
+                  {/* Search Suggestions Dropdown */}
+                  {showDesignationSuggestions && searchTerm && filteredDesignationSuggestions.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                      {filteredDesignationSuggestions.slice(0, 6).map((suggestion, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors duration-150 text-gray-700"
+                          onClick={() => {
+                            setSearchTerm(suggestion);
+                            setShowDesignationSuggestions(false);
+                          }}
+                        >
+                          <div className="flex items-center">
+                            <svg className="w-4 h-4 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <span className="truncate">{suggestion}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="h-8 w-px bg-gray-200 mx-3 hidden md:block" />
-                <input
-                  type="text"
-                  value={locationTerm}
-                  onChange={e => setLocationTerm(e.target.value)}
-                  placeholder="Location (city, state, or remote)"
-                  className="flex-1 px-6 py-3 bg-transparent outline-none text-gray-900 text-base rounded-full placeholder-gray-400"
-                />
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={locationTerm}
+                    onChange={e => setLocationTerm(e.target.value)}
+                    placeholder="Location (city, state, or remote)"
+                    className="w-full px-6 py-3 bg-transparent outline-none text-gray-900 text-base rounded-full placeholder-gray-400"
+                    onFocus={() => setShowLocationSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowLocationSuggestions(false), 200)}
+                  />
+                  {/* Location Suggestions Dropdown */}
+                  {showLocationSuggestions && locationTerm && filteredLocationSuggestions.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                      {filteredLocationSuggestions.slice(0, 6).map((suggestion, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors duration-150 text-gray-700"
+                          onClick={() => {
+                            setLocationTerm(suggestion);
+                            setShowLocationSuggestions(false);
+                          }}
+                        >
+                          <div className="flex items-center">
+                            <svg className="w-4 h-4 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span className="truncate">{suggestion}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button
                   className="ml-2 flex items-center justify-center bg-ocean-dark hover:bg-ocean-light text-white rounded-full w-12 h-12 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ocean-dark focus:ring-offset-2"
                   type="submit"
@@ -903,9 +1034,15 @@ const Home: React.FC = () => {
                   </div>
                 ) : jobsError ? (
                   <div className="text-center text-red-600 py-4">{jobsError}</div>
+                ) : filteredJobsAndInternships.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-gray-400 text-6xl mb-4">🔍</div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No opportunities found</h3>
+                    <p className="text-gray-500">Try adjusting your search terms or filters</p>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {jobsAndInternships.slice(0, 6).map((item) => {
+                    {filteredJobsAndInternships.slice(0, 6).map((item) => {
                       const skills = Array.isArray(item.requirements)
                         ? item.requirements.map(r =>
                             typeof r === 'string'

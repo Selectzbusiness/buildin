@@ -82,6 +82,19 @@ const Jobs: React.FC = () => {
   const uniqueTypes = Array.from(new Set(jobs.map(job => job.job_type).filter((type): type is string => Boolean(type))));
   const uniqueCompanies = Array.from(new Set(jobs.map(job => job.company?.name).filter((name): name is string => Boolean(name))));
 
+  // Generate search suggestions from job data
+  const searchSuggestions = [
+    ...Array.from(new Set(jobs.map(job => job.title).filter(Boolean))),
+    ...Array.from(new Set(jobs.map(job => job.company?.name).filter(Boolean))),
+    ...Array.from(new Set(jobs.map(job => job.location?.city).filter(Boolean))),
+    'Software Engineer', 'Data Scientist', 'Product Manager', 'UX Designer',
+    'Marketing Manager', 'Sales Representative', 'Content Writer', 'Graphic Designer',
+    'Frontend Developer', 'Backend Developer', 'DevOps Engineer', 'QA Engineer',
+    'Business Analyst', 'Project Manager', 'HR Manager', 'Finance Analyst',
+    'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai', 'Pune', 'Kolkata',
+    'Remote', 'Work from Home', 'Hybrid', 'On-site'
+  ];
+
   // Filtering logic
   const filteredJobs = jobs.filter(job => {
     const matchesSearch =
@@ -267,6 +280,8 @@ const Jobs: React.FC = () => {
                     onChange={setSearchTerm}
                     placeholder="Search jobs by title, company, or description..."
                     className="max-w-2xl mx-auto"
+                    suggestions={searchSuggestions}
+                    onSuggestionSelect={(suggestion) => setSearchTerm(suggestion)}
                   />
                 </div>
                 {/* Results */}

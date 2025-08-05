@@ -85,7 +85,14 @@ export const AI_CONFIG = {
 
 // Helper function to check if API key is configured
 export const isApiKeyConfigured = (): boolean => {
-  return !!(AI_CONFIG.apiKey && AI_CONFIG.apiKey !== 'your_openrouter_api_key_here');
+  const apiKey = AI_CONFIG.apiKey;
+  return !!(apiKey && 
+    apiKey !== 'your_openrouter_api_key_here' && 
+    apiKey !== 'YOUR_DEEPSEEK_API_KEY_HERE' &&
+    apiKey.trim().length > 0 &&
+    apiKey !== 'undefined' &&
+    apiKey !== 'null'
+  );
 };
 
 // Helper function to get API key with error handling
@@ -108,7 +115,11 @@ export const getApiConfigStatus = () => {
     apiKeyFormat: AI_CONFIG.apiKey ? validateApiKeyFormat(AI_CONFIG.apiKey) : false,
     serviceUrl: AI_CONFIG.serviceUrl,
     model: AI_CONFIG.model,
-    isConfigured: isApiKeyConfigured()
+    isConfigured: isApiKeyConfigured(),
+    envCheck: {
+      envVarExists: !!process.env.REACT_APP_OPENROUTER_API_KEY,
+      envVarValue: process.env.REACT_APP_OPENROUTER_API_KEY ? 'Set' : 'Not Set'
+    }
   };
 };
 
@@ -117,6 +128,11 @@ export const makeAIApiCall = async (
   messages: Array<{ role: string; content: string }>,
   context: keyof typeof AI_CONFIG.systemPrompts = 'general'
 ): Promise<string> => {
+  // Check if API key is configured
+  if (!isApiKeyConfigured()) {
+    throw new Error('AI service is not properly configured. Please contact support for assistance.');
+  }
+
   const apiKey = getApiKey();
   
   try {
@@ -144,20 +160,36 @@ export const makeAIApiCall = async (
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`OpenRouter API error: ${response.status} - ${errorData.error?.message || response.statusText}`);
+      const errorMessage = errorData.error?.message || response.statusText;
+      
+      // Handle specific API errors
+      if (response.status === 401) {
+        throw new Error('Authentication failed. Please check your API configuration.');
+      } else if (response.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again in a moment.');
+      } else if (response.status >= 500) {
+        throw new Error('AI service is temporarily unavailable. Please try again later.');
+      } else {
+        throw new Error(`AI service error: ${errorMessage}`);
+      }
     }
 
     const data = await response.json();
     
     if (data.error) {
-      throw new Error(`OpenRouter API error: ${data.error.message || 'Unknown error'}`);
+      throw new Error(`AI service error: ${data.error.message || 'Unknown error'}`);
     }
     
-    return data.choices?.[0]?.message?.content || 'Sorry, I couldn\'t process your request. Please try again.';
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error('No response received from AI service.');
+    }
+    
+    return content;
   } catch (error) {
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error('Network error: Unable to connect to OpenRouter API');
+    throw new Error('Network error: Unable to connect to AI service');
   }
 }; 

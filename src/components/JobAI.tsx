@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
-import { makeAIApiCall, isApiKeyConfigured } from '../config/ai';
+import { makeAIApiCall } from '../config/ai';
 
 interface JobAIProps {
   context?: 'job-search' | 'resume' | 'interview' | 'career' | 'general';
@@ -55,13 +55,6 @@ const JobAI: React.FC<JobAIProps> = ({ context = 'general', className = '' }) =>
 
     setIsLoading(true);
     setResponse('');
-
-    // Check if API key is configured
-    if (!isApiKeyConfigured()) {
-      setResponse('Error: API key not configured. Please check your environment variables.');
-      setIsLoading(false);
-      return;
-    }
 
     try {
       const aiResponse = await makeAIApiCall(

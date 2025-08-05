@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { makeAIApiCall, isApiKeyConfigured } from '../config/ai';
+import { makeAIApiCall } from '../config/ai';
 
 interface Message {
   id: string;
@@ -45,19 +45,6 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ size = 'small' }) => {
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
-
-    // Check if API key is configured
-    if (!isApiKeyConfigured()) {
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'Error: API key not configured. Please check your environment variables.',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-      setIsLoading(false);
-      return;
-    }
 
     try {
       // Prepare messages for AI call

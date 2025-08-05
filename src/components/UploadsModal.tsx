@@ -3,7 +3,14 @@ import { supabase } from '../config/supabase';
 import { AuthContext } from '../contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
 import useIsMobile from '../hooks/useIsMobile';
-import { FiUpload, FiCamera } from 'react-icons/fi';
+import { FiUpload, FiCamera, FiLock, FiUnlock } from 'react-icons/fi';
+import { 
+  checkVideoLockStatus, 
+  attemptVideoDeletion, 
+  getVideoLockMessage, 
+  formatRemainingDays,
+  type VideoLockStatus 
+} from '../utils/videoLock';
 
 // Video validation constants
 const MAX_VIDEO_DURATION = 60; // 60 seconds
@@ -66,6 +73,14 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
   // Add state for play overlay
   const [showPlayOverlay, setShowPlayOverlay] = useState(false);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
+  
+  // Video lock states
+  const [videoLockStatus, setVideoLockStatus] = useState<VideoLockStatus>({
+    isLocked: false,
+    remainingDays: 0,
+    canDelete: true,
+    firstUploadDate: null
+  });
 
   // Load existing data when modal opens
   useEffect(() => {
@@ -118,9 +133,19 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
         if (data.intro_video_url) {
           setExistingVideoUrl(data.intro_video_url);
           setVideoState('saved');
+          
+          // Fetch video lock status
+          const lockStatus = await checkVideoLockStatus(user.id);
+          setVideoLockStatus(lockStatus);
         } else {
           setExistingVideoUrl(null);
           setVideoState('initial');
+          setVideoLockStatus({
+            isLocked: false,
+            remainingDays: 0,
+            canDelete: true,
+            firstUploadDate: null
+          });
         }
         if (data.resume_url) {
           setExistingResumeUrl(data.resume_url);
@@ -140,6 +165,12 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
         setExistingResumeUrl(null);
         setVideoState('initial');
         setResumeState('initial');
+        setVideoLockStatus({
+          isLocked: false,
+          remainingDays: 0,
+          canDelete: true,
+          firstUploadDate: null
+        });
       }
     } catch (err: any) {
       console.error('Error fetching existing data:', err);
@@ -518,6 +549,10 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
       if (activeTab === 'videos') {
         setExistingVideoUrl(videoUrl);
         setVideoState('saved');
+        
+        // Refresh video lock status after saving
+        const lockStatus = await checkVideoLockStatus(user.id);
+        setVideoLockStatus(lockStatus);
       } else {
         setExistingResumeUrl(resumeUrl);
         setResumeState('saved');
@@ -547,6 +582,14 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
   const deleteVideo = async () => {
     if (!user || !existingVideoUrl) return;
 
+    // Check video lock status first
+    const lockStatus = await checkVideoLockStatus(user.id);
+    
+    if (!lockStatus.canDelete) {
+      setError(`Video cannot be deleted for ${formatRemainingDays(lockStatus.remainingDays)}. You can replace it with a new video instead.`);
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to delete your video? This action cannot be undone.')) {
       return;
     }
@@ -555,6 +598,15 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
     setError(null);
 
     try {
+      // Use the video lock utility to attempt deletion
+      const result = await attemptVideoDeletion(user.id);
+      
+      if (!result.success) {
+        setError(result.error || 'Failed to delete video.');
+        return;
+      }
+
+      // If database deletion was successful, remove from storage
       const videoFileName = existingVideoUrl.split('/').pop();
       if (videoFileName) {
         await supabase.storage
@@ -562,15 +614,14 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
           .remove([`${user.id}/${videoFileName}`]);
       }
 
-      const { error } = await supabase
-        .from('profiles')
-        .update({ intro_video_url: null })
-        .eq('auth_id', user.id);
-
-      if (error) throw error;
-
       setExistingVideoUrl(null);
       setVideoState('initial');
+      setVideoLockStatus({
+        isLocked: false,
+        remainingDays: 0,
+        canDelete: true,
+        firstUploadDate: null
+      });
       setSuccess('Video deleted successfully!');
       
       setTimeout(() => {
@@ -1113,59 +1164,94 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
                           </div>
                         </button>
                       </div>
+                      
+                      {/* Video Lock Period Notice - Mobile */}
+                      <div className="mt-6">
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-4">
+                          <div className="flex items-start space-x-3">
+                            <FiLock className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-blue-800 font-semibold text-sm">
+                                Video Lock Period
+                              </p>
+                              <p className="text-blue-700 text-xs mt-1">
+                                Once you save your first video, it will be locked for deletion for 20 days. You can replace it anytime, but cannot remove it completely during this period.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                      {/* Upload Existing Video - Desktop */}
-                      <div className="group">
-                        <label className="block cursor-pointer">
-                          <input
-                            type="file"
-                            accept="video/*"
-                            onChange={handleVideoFileChange}
-                            className="hidden"
-                            aria-label="Upload video file"
-                          />
-                          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-dashed border-blue-300 rounded-3xl p-12 text-center hover:border-blue-400 hover:from-blue-100 hover:to-indigo-100 transition-all duration-300 group-hover:scale-[1.02] shadow-xl hover:shadow-2xl min-h-[300px] flex flex-col justify-center">
+                    <>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                        {/* Upload Existing Video - Desktop */}
+                        <div className="group">
+                          <label className="block cursor-pointer">
+                            <input
+                              type="file"
+                              accept="video/*"
+                              onChange={handleVideoFileChange}
+                              className="hidden"
+                              aria-label="Upload video file"
+                            />
+                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-dashed border-blue-300 rounded-3xl p-12 text-center hover:border-blue-400 hover:from-blue-100 hover:to-indigo-100 transition-all duration-300 group-hover:scale-[1.02] shadow-xl hover:shadow-2xl min-h-[300px] flex flex-col justify-center">
+                              <div className="space-y-6">
+                                <div className="w-24 h-24 mx-auto bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-xl">
+                                  <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <p className="text-2xl font-bold text-gray-900 mb-2">Upload Video</p>
+                                  <p className="text-gray-600 text-lg">Select a video file from your device</p>
+                                  <p className="text-gray-500 mt-2 text-sm">Drag and drop or click to browse</p>
+                                </div>
+                              </div>
+                            </div>
+                          </label>
+                        </div>
+
+                        {/* Record New Video - Desktop */}
+                        <div className="group">
+                          <button
+                            onClick={startRecording}
+                            className="w-full h-full bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-dashed border-green-300 rounded-3xl p-12 text-center hover:border-green-400 hover:from-green-100 hover:to-emerald-100 transition-all duration-300 group-hover:scale-[1.02] focus:outline-none shadow-xl hover:shadow-2xl min-h-[300px] flex flex-col justify-center"
+                            aria-label="Record new video"
+                            type="button"
+                          >
                             <div className="space-y-6">
-                              <div className="w-24 h-24 mx-auto bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-xl">
+                              <div className="w-24 h-24 mx-auto bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-xl">
                                 <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                 </svg>
                               </div>
                               <div>
-                                <p className="text-2xl font-bold text-gray-900 mb-2">Upload Video</p>
-                                <p className="text-gray-600 text-lg">Select a video file from your device</p>
-                                <p className="text-gray-500 mt-2 text-sm">Drag and drop or click to browse</p>
+                                <p className="text-2xl font-bold text-gray-900 mb-2">Record Video</p>
+                                <p className="text-gray-600 text-lg">Use your camera to record directly</p>
+                                <p className="text-gray-500 mt-2 text-sm">Perfect lighting recommended</p>
                               </div>
                             </div>
-                          </div>
-                        </label>
+                          </button>
+                        </div>
                       </div>
-
-                      {/* Record New Video - Desktop */}
-                      <div className="group">
-                        <button
-                          onClick={startRecording}
-                          className="w-full h-full bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-dashed border-green-300 rounded-3xl p-12 text-center hover:border-green-400 hover:from-green-100 hover:to-emerald-100 transition-all duration-300 group-hover:scale-[1.02] focus:outline-none shadow-xl hover:shadow-2xl min-h-[300px] flex flex-col justify-center"
-                          aria-label="Record new video"
-                          type="button"
-                        >
-                          <div className="space-y-6">
-                            <div className="w-24 h-24 mx-auto bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-xl">
-                              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
-                            </div>
+                      
+                      <div className="mt-8 max-w-2xl mx-auto">
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-6">
+                          <div className="flex items-start space-x-4">
+                            <FiLock className="w-6 h-6 text-blue-600 mt-0.5 flex-shrink-0" />
                             <div>
-                              <p className="text-2xl font-bold text-gray-900 mb-2">Record Video</p>
-                              <p className="text-gray-600 text-lg">Use your camera to record directly</p>
-                              <p className="text-gray-500 mt-2 text-sm">Perfect lighting recommended</p>
+                              <p className="text-blue-800 font-semibold text-base">
+                                Video Lock Period
+                              </p>
+                              <p className="text-blue-700 text-sm mt-2">
+                                Once you save your first video, it will be locked for deletion for 20 days. You can replace it anytime, but cannot remove it completely during this period.
+                              </p>
                             </div>
                           </div>
-                        </button>
+                        </div>
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
               )}
@@ -1640,24 +1726,56 @@ const UploadsModal: React.FC<UploadsModalProps> = ({ isOpen, onClose }) => {
                     </div>
                   </div>
 
+                  {/* Video Lock Status Display */}
+                  {videoLockStatus.isLocked && (
+                    <div className="flex justify-center mb-4">
+                      <div className="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 rounded-2xl p-4 max-w-md">
+                        <div className="flex items-center space-x-3">
+                          <FiLock className="w-6 h-6 text-orange-600" />
+                          <div>
+                            <p className="text-orange-800 font-semibold text-sm">
+                              Video Locked for Deletion
+                            </p>
+                            <p className="text-orange-700 text-xs">
+                              {formatRemainingDays(videoLockStatus.remainingDays)} remaining
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex justify-center">
                     <button
                       onClick={deleteVideo}
-                      disabled={loading}
-                      className={`group bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-10 py-5 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 border-red-400 disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none${isMobile ? ' px-6 py-3 text-sm' : ''}`}
-                      aria-label="Delete video"
+                      disabled={loading || videoLockStatus.isLocked}
+                      className={`group px-10 py-5 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 shadow-2xl border-2 disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none disabled:cursor-not-allowed ${
+                        videoLockStatus.isLocked 
+                          ? 'bg-gradient-to-r from-gray-400 to-gray-500 text-gray-600 border-gray-300 cursor-not-allowed' 
+                          : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-red-400'
+                      } ${isMobile ? ' px-6 py-3 text-sm' : ''}`}
+                      aria-label={videoLockStatus.isLocked ? "Video is locked and cannot be deleted" : "Delete video"}
                     >
                       <div className="flex items-center space-x-3">
                         {loading ? (
                           <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                           </svg>
+                        ) : videoLockStatus.isLocked ? (
+                          <FiLock className="w-5 h-5" />
                         ) : (
                           <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         )}
-                        <span>{loading ? 'Deleting...' : 'Delete Video'}</span>
+                        <span>
+                          {loading 
+                            ? 'Deleting...' 
+                            : videoLockStatus.isLocked 
+                              ? `Locked (${formatRemainingDays(videoLockStatus.remainingDays)})`
+                              : 'Delete Video'
+                          }
+                        </span>
                       </div>
                     </button>
                   </div>

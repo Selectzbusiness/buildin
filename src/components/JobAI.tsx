@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
+import { makeAIApiCall, isApiKeyConfigured } from '../config/ai';
 
 interface JobAIProps {
   context?: 'job-search' | 'resume' | 'interview' | 'career' | 'general';
@@ -55,41 +56,18 @@ const JobAI: React.FC<JobAIProps> = ({ context = 'general', className = '' }) =>
     setIsLoading(true);
     setResponse('');
 
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer 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',
-          'HTTP-Referer': 'https://www.risky.com',
-          'X-Title': 'style',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'deepseek/deepseek-r1:free',
-          messages: [
-            {
-              role: 'system',
-              content: `You are Selectz Job AI, a specialized assistant for job seekers and career development. 
-              You provide expert advice on:
-              - Job search strategies and techniques
-              - Resume writing and optimization
-              - Interview preparation and techniques
-              - Career development and planning
-              - Professional networking
-              - Salary negotiation
-              - Industry insights and trends
-              
-              Context: ${contextPrompts[context]}
-              
-              Provide practical, actionable advice. Be encouraging and professional. Keep responses concise but comprehensive.`
-            },
-            { role: 'user', content: inputValue }
-          ],
-        }),
-      });
+    // Check if API key is configured
+    if (!isApiKeyConfigured()) {
+      setResponse('Error: API key not configured. Please check your environment variables.');
+      setIsLoading(false);
+      return;
+    }
 
-      const data = await response.json();
-      const aiResponse = data.choices?.[0]?.message?.content || 'Sorry, I couldn\'t process your request. Please try again.';
+    try {
+      const aiResponse = await makeAIApiCall(
+        [{ role: 'user', content: inputValue }],
+        context
+      );
       setResponse(aiResponse);
     } catch (error) {
       setResponse('Sorry, I encountered an error. Please try again later.');

@@ -11,6 +11,7 @@ import { FiFilter, FiSearch, FiMapPin, FiBriefcase, FiUsers, FiMic, FiBookOpen, 
 import { useJobs } from '../contexts/JobsContext';
 import VideoVerifiedTag from '../components/VideoVerifiedTag';
 
+
 interface Location {
   city: string;
   area: string;
@@ -1093,6 +1094,8 @@ const Home: React.FC = () => {
                   </div>
                 )}
               </section>
+              
+
             </div>
             {/* Featured Companies */}
             <div className="w-full lg:w-[28%]">

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { makeAIApiCall, isApiKeyConfigured } from '../config/ai';
 
 interface Message {
   id: string;
@@ -45,42 +46,32 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ size = 'small' }) => {
     setInputValue('');
     setIsLoading(true);
 
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer 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',
-          'HTTP-Referer': 'https://www.risky.com',
-          'X-Title': 'style',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'deepseek/deepseek-r1:free',
-          messages: [
-            {
-              role: 'system',
-              content: `You are Selectz AI Assistant, a helpful AI assistant for a job matching and recruitment platform. 
-              You help users with:
-              - Job search advice and tips
-              - Resume writing and optimization
-              - Interview preparation
-              - Career guidance
-              - Platform usage questions
-              - General job market insights
-              
-              Be professional, helpful, and provide actionable advice. Keep responses concise but informative.`
-            },
-            ...messages.map(msg => ({ role: msg.role, content: msg.content })),
-            { role: 'user', content: inputValue }
-          ],
-        }),
-      });
+    // Check if API key is configured
+    if (!isApiKeyConfigured()) {
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Error: API key not configured. Please check your environment variables.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      setIsLoading(false);
+      return;
+    }
 
-      const data = await response.json();
+    try {
+      // Prepare messages for AI call
+      const aiMessages = [
+        ...messages.map(msg => ({ role: msg.role, content: msg.content })),
+        { role: 'user', content: inputValue }
+      ];
+
+      const aiResponse = await makeAIApiCall(aiMessages, 'general');
+      
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.choices?.[0]?.message?.content || 'Sorry, I couldn\'t process your request. Please try again.',
+        content: aiResponse,
         timestamp: new Date()
       };
 

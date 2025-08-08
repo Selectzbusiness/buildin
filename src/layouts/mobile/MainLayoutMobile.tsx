@@ -7,7 +7,9 @@ import { FiUser, FiSettings, FiHeart, FiBriefcase, FiLogOut, FiArrowRight, FiHom
 import { supabase } from '../../config/supabase';
 import toast from 'react-hot-toast';
 import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 import { useEffect } from 'react';
+import AIAssistant from '../../components/AIAssistant';
 import VideoVerifiedTag from '../../components/VideoVerifiedTag';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSafeArea } from '../../hooks/useSafeArea';
@@ -28,6 +30,27 @@ const MainLayoutMobile: React.FC = () => {
       setIsAndroidApp(true);
     }
   }, []);
+
+  // Handle Android hardware back button
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const sub = CapacitorApp.addListener('backButton', () => {
+      // Close transient overlays first
+      if (showUploadsModal) {
+        setShowUploadsModal(false);
+        return;
+      }
+      if (showProfileMenu) {
+        setShowProfileMenu(false);
+        return;
+      }
+      // Navigate back if possible
+      if (window.history.length > 1) {
+        navigate(-1);
+      }
+    });
+    return () => { sub.then((h) => h.remove()); };
+  }, [showUploadsModal, showProfileMenu, navigate]);
 
   // Trigger animation when route changes
   useEffect(() => {
@@ -142,7 +165,7 @@ const MainLayoutMobile: React.FC = () => {
   const currentInitial = shouldAnimate ? initialAnim : { opacity: 1, y: 0 };
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* Status Bar Spacer for system icons */}
       <div style={{ height: 'env(safe-area-inset-top, 24px)' }} className="bg-white" />
       {/* Sticky Header with safe area padding */}
@@ -166,19 +189,19 @@ const MainLayoutMobile: React.FC = () => {
           )}
         </div>
       </div>
-      {/* Main Content - Card style */}
-      <main className="flex-1 pb-20 px-2">
+      {/* Main Content - full width */}
+      <main className="flex-1 pb-20">
         <motion.div
           variants={mainVariants}
           initial={currentInitial}
           animate={currentAnim}
-          className="card p-2 bg-white/90 shadow-lg rounded-2xl"
+          className=""
         >
           <Outlet />
         </motion.div>
       </main>
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 flex justify-between items-center px-2 h-16">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 flex justify-between items-center px-2 h-16" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         {navItems.map((item, idx) => (
           <button
             key={item.name}
@@ -200,6 +223,9 @@ const MainLayoutMobile: React.FC = () => {
       )}
       {/* Uploads Modal */}
       <UploadsModal isOpen={showUploadsModal} onClose={() => setShowUploadsModal(false)} />
+      
+      {/* AI Assistant (mobile-friendly size and offset to avoid bottom nav) */}
+      <AIAssistant size="small" offsetBottom={88} />
       {/* Profile Dropdown Modal */}
       {showProfileMenu && (
         <AnimatePresence>

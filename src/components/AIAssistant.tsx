@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { makeAIApiCall } from '../config/ai';
+import { makeAIApiCall, AI_CONFIG, isApiKeyConfigured } from '../config/ai';
 
 interface Message {
   id: string;
@@ -10,9 +10,11 @@ interface Message {
 
 interface AIAssistantProps {
   size?: 'small' | 'large';
+  // Distance from the bottom edge in pixels for the floating button
+  offsetBottom?: number;
 }
 
-const AIAssistant: React.FC<AIAssistantProps> = ({ size = 'small' }) => {
+const AIAssistant: React.FC<AIAssistantProps> = ({ size = 'small', offsetBottom = 24 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -31,6 +33,16 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ size = 'small' }) => {
       inputRef.current.focus();
     }
   }, [isOpen]);
+
+  // Temporary test function
+  const testEnvironmentVariables = () => {
+    console.log('🧪 TESTING ENVIRONMENT VARIABLES:');
+    console.log('REACT_APP_OPENROUTER_API_KEY exists:', !!process.env.REACT_APP_OPENROUTER_API_KEY);
+    console.log('REACT_APP_OPENROUTER_API_KEY value:', process.env.REACT_APP_OPENROUTER_API_KEY ? 'SET' : 'NOT SET');
+    console.log('AI_CONFIG.apiKey exists:', !!AI_CONFIG.apiKey);
+    console.log('AI_CONFIG.apiKey length:', AI_CONFIG.apiKey?.length || 0);
+    console.log('isApiKeyConfigured():', isApiKeyConfigured());
+  };
 
   const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -53,7 +65,11 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ size = 'small' }) => {
         { role: 'user', content: inputValue }
       ];
 
+      console.log('Sending AI request:', { messages: aiMessages, context: 'general' });
+      
       const aiResponse = await makeAIApiCall(aiMessages, 'general');
+      
+      console.log('AI response received:', aiResponse);
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -64,10 +80,11 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ size = 'small' }) => {
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
+      console.error('AI Error:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again later.',
+        content: error instanceof Error ? error.message : 'Sorry, I encountered an error. Please try again later.',
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -102,8 +119,9 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ size = 'small' }) => {
 
   // Standardize the floating button size for both layouts
   const buttonClass = size === 'large'
-    ? 'fixed bottom-6 right-6 w-16 h-16 text-2xl bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 z-50 flex items-center justify-center'
-    : 'fixed bottom-6 right-6 w-12 h-12 text-xl bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 z-50 flex items-center justify-center';
+    ? 'fixed right-6 w-16 h-16 text-2xl bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 z-50 flex items-center justify-center'
+    : 'fixed right-6 w-12 h-12 text-xl bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 z-50 flex items-center justify-center';
+  const buttonStyle: React.CSSProperties = { bottom: offsetBottom };
 
   return (
     <>
@@ -111,6 +129,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ size = 'small' }) => {
       <button
         onClick={() => setIsOpen(true)}
         className={buttonClass}
+        style={buttonStyle}
         aria-label="Open AI Assistant"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,6 +162,13 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ size = 'small' }) => {
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
+                </button>
+                <button
+                  onClick={testEnvironmentVariables}
+                  className="text-white hover:text-blue-100 transition-colors ml-2"
+                  title="Test Environment Variables"
+                >
+                  🧪
                 </button>
               </div>
             </div>

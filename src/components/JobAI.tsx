@@ -57,13 +57,18 @@ const JobAI: React.FC<JobAIProps> = ({ context = 'general', className = '' }) =>
     setResponse('');
 
     try {
+      console.log('Sending JobAI request:', { input: inputValue, context });
+      
       const aiResponse = await makeAIApiCall(
         [{ role: 'user', content: inputValue }],
         context
       );
+      
+      console.log('JobAI response received:', aiResponse);
       setResponse(aiResponse);
     } catch (error) {
-      setResponse('Sorry, I encountered an error. Please try again later.');
+      console.error('JobAI Error:', error);
+      setResponse(error instanceof Error ? error.message : 'Sorry, I encountered an error. Please try again later.');
     } finally {
       setIsLoading(false);
     }

@@ -1,14 +1,21 @@
 // AI Configuration
 export const AI_CONFIG = {
   // API Configuration
-  apiKey: process.env.REACT_APP_OPENROUTER_API_KEY,
+  apiKey: (process.env.REACT_APP_OPENROUTER_API_KEY || '')
+    .trim()
+    .replace(/^"|"$/g, '')
+    .replace(/^'|'$/g, ''),
   serviceUrl: process.env.REACT_APP_AI_SERVICE_URL || 'https://openrouter.ai/api/v1/chat/completions',
   model: process.env.REACT_APP_AI_MODEL || 'deepseek/deepseek-r1:free',
   
-  // Headers
+  // Headers - Updated for better security
   headers: {
-    'HTTP-Referer': 'https://www.risky.com',
-    'X-Title': 'style',
+    // OpenRouter requires the HTTP-Referer to match the real site origin.
+    // Use the current browser origin in dev/prod; fall back to configured site URL.
+    'HTTP-Referer': (typeof window !== 'undefined' && window.location?.origin)
+      ? window.location.origin
+      : (process.env.REACT_APP_SITE_URL || 'http://localhost:3000'),
+    'X-Title': 'Selectz AI Assistant',
     'Content-Type': 'application/json',
   },
   
@@ -95,10 +102,34 @@ export const isApiKeyConfigured = (): boolean => {
   );
 };
 
+// Always show debug info (will be removed later)
+console.log('🔍 AI CONFIGURATION DEBUG:', {
+  hasApiKey: !!AI_CONFIG.apiKey,
+  apiKeyLength: AI_CONFIG.apiKey?.length || 0,
+  envVarExists: !!process.env.REACT_APP_OPENROUTER_API_KEY,
+  apiKeyFirstChars: AI_CONFIG.apiKey ? AI_CONFIG.apiKey.substring(0, 15) + '...' : 'NOT SET',
+  isConfigured: isApiKeyConfigured(),
+  environment: process.env.NODE_ENV,
+  serviceUrl: AI_CONFIG.serviceUrl,
+  model: AI_CONFIG.model
+});
+
+if (!AI_CONFIG.apiKey) {
+  console.error('❌ ERROR: REACT_APP_OPENROUTER_API_KEY is not set!');
+  console.log('📝 To fix this:');
+  console.log('1. Create a file named .env.local in the job-connect directory');
+  console.log('2. Add: REACT_APP_OPENROUTER_API_KEY=your_actual_api_key_here');
+  console.log('3. Restart your development server');
+}
+
 // Helper function to get API key with error handling
 export const getApiKey = (): string => {
   if (!isApiKeyConfigured()) {
-    throw new Error('OpenRouter API key not configured. Please check your REACT_APP_OPENROUTER_API_KEY environment variable.');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('AI service is not configured for production. Please contact support.');
+    } else {
+      throw new Error('OpenRouter API key not configured. Place REACT_APP_OPENROUTER_API_KEY in job-connect/.env.local and restart the dev server.');
+    }
   }
   return AI_CONFIG.apiKey!;
 };
@@ -116,6 +147,7 @@ export const getApiConfigStatus = () => {
     serviceUrl: AI_CONFIG.serviceUrl,
     model: AI_CONFIG.model,
     isConfigured: isApiKeyConfigured(),
+    environment: process.env.NODE_ENV,
     envCheck: {
       envVarExists: !!process.env.REACT_APP_OPENROUTER_API_KEY,
       envVarValue: process.env.REACT_APP_OPENROUTER_API_KEY ? 'Set' : 'Not Set'
@@ -130,7 +162,11 @@ export const makeAIApiCall = async (
 ): Promise<string> => {
   // Check if API key is configured
   if (!isApiKeyConfigured()) {
-    throw new Error('AI service is not properly configured. Please contact support for assistance.');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('AI service is temporarily unavailable. Please try again later.');
+    } else {
+      throw new Error('AI service is not properly configured. Please contact support for assistance.');
+    }
   }
 
   const apiKey = getApiKey();
@@ -141,8 +177,8 @@ export const makeAIApiCall = async (
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://www.risky.com',
-        'X-Title': 'style',
+        'HTTP-Referer': AI_CONFIG.headers['HTTP-Referer'],
+        'X-Title': AI_CONFIG.headers['X-Title'],
       },
       body: JSON.stringify({
         model: AI_CONFIG.model,
@@ -161,10 +197,11 @@ export const makeAIApiCall = async (
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       const errorMessage = errorData.error?.message || response.statusText;
+      console.error('OpenRouter error detail:', { status: response.status, error: errorData });
       
-      // Handle specific API errors
+      // Handle specific API errors with more detail
       if (response.status === 401) {
-        throw new Error('Authentication failed. Please check your API configuration.');
+        throw new Error(`Authentication failed: ${errorMessage}. Verify API key and allowed origins for ${AI_CONFIG.headers['HTTP-Referer']}.`);
       } else if (response.status === 429) {
         throw new Error('Rate limit exceeded. Please try again in a moment.');
       } else if (response.status >= 500) {
@@ -192,4 +229,4 @@ export const makeAIApiCall = async (
     }
     throw new Error('Network error: Unable to connect to AI service');
   }
-}; 
+};

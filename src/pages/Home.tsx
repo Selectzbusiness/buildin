@@ -7,7 +7,9 @@ import NotificationCenter from '../components/NotificationCenter';
 import JobCardNew from '../components/JobCardNew';
 import { InternshipCard } from '../components/InternshipCard';
 import useIsMobile from '../hooks/useIsMobile';
-import { FiFilter, FiSearch, FiMapPin, FiBriefcase, FiUsers, FiMic, FiBookOpen, FiStar, FiTrendingUp, FiClock } from 'react-icons/fi';
+import { FiSearch, FiMapPin, FiBookOpen, FiStar, FiFilter, FiX } from 'react-icons/fi';
+import { MdWorkOutline } from 'react-icons/md';
+import { FaUserGraduate } from 'react-icons/fa';
 import { useJobs } from '../contexts/JobsContext';
 import VideoVerifiedTag from '../components/VideoVerifiedTag';
 
@@ -91,6 +93,7 @@ const Home: React.FC = () => {
   const [showDesignationSuggestions, setShowDesignationSuggestions] = useState(false);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [recentSearches, setRecentSearches] = useState<{designation: string, location: string, type: string}[]>([]);
+  const [featuredCoursesHome, setFeaturedCoursesHome] = useState<any[]>([]);
 
   // Filter state
   type FilterState = {
@@ -113,45 +116,7 @@ const Home: React.FC = () => {
     postedDate: ''
   });
 
-  // Sample courses data for horizontal scroll
-  const featuredCourses = [
-    {
-      id: 1,
-      title: "Web Development",
-      provider: "Coursera",
-      rating: 4.8,
-      students: "12.5K",
-      price: "₹2,999",
-      image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=200&h=120&fit=crop"
-    },
-    {
-      id: 2,
-      title: "Data Science",
-      provider: "Udemy",
-      rating: 4.6,
-      students: "8.9K",
-      price: "₹1,499",
-      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=200&h=120&fit=crop"
-    },
-    {
-      id: 3,
-      title: "Digital Marketing",
-      provider: "Google",
-      rating: 4.9,
-      students: "15.2K",
-      price: "Free",
-      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=200&h=120&fit=crop"
-    },
-    {
-      id: 4,
-      title: "UI/UX Design",
-      provider: "Figma",
-      rating: 4.7,
-      students: "6.8K",
-      price: "₹3,999",
-      image: "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=200&h=120&fit=crop"
-    }
-  ];
+  // Removed mock featured courses data
 
   // Mobile filter bar options - dynamically generated from real data
   const filterOptions = [
@@ -214,6 +179,22 @@ const Home: React.FC = () => {
       }
     };
     fetchCompaniesData();
+    // Fetch featured courses for mobile carousel
+    const fetchFeaturedCourses = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('courses')
+          .select('*')
+          .eq('status', 'published')
+          .order('created_at', { ascending: false })
+          .limit(10);
+        if (error) throw error;
+        if (isMounted) setFeaturedCoursesHome(data || []);
+      } catch (e: any) {
+        console.warn('Error fetching featured courses:', e?.message || e);
+      }
+    };
+    fetchFeaturedCourses();
     return () => { isMounted = false; };
   }, []);
 
@@ -517,6 +498,12 @@ const Home: React.FC = () => {
     localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
   };
 
+  const removeRecentSearch = (index: number) => {
+    const updated = recentSearches.filter((_, i) => i !== index);
+    setRecentSearches(updated);
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+  };
+
   return (
     <>
       {/* Mobile Design */}
@@ -526,118 +513,132 @@ const Home: React.FC = () => {
           <div className="bg-white shadow-sm border-b border-gray-100">
             <div className="px-4 py-3">
               {/* App Branding */}
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Selectz</h1>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <FiMapPin className="w-4 h-4 mr-1" />
-                    <span>Mumbai, Maharashtra</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                    <FiUsers className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center text-white font-semibold">
-                    {user?.email?.[0]?.toUpperCase() || 'U'}
-                  </div>
-                </div>
+              <div className="mb-3 flex items-center gap-2">
+                <img src="/selectz.logo.png" alt="Selectz" className="w-7 h-7 rounded" />
+                <h1 className="text-2xl font-bold text-ocean-700">Selectz</h1>
               </div>
 
-              {/* Search Bar */}
+              {/* Search Bar - mobile friendly, attractive */}
               <div className="relative">
-                <div className="flex items-center bg-white border-2 border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
-                  <FiSearch className="w-5 h-5 text-gray-400 mr-3" />
-                  <input
-                    type="text"
-                    placeholder="Search jobs by city, skills, or company"
-                    className="flex-1 text-gray-900 placeholder-gray-500 outline-none"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onFocus={() => setShowMobileSearchModal(true)}
-                  />
-                  <button className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                    <FiMic className="w-4 h-4 text-white" />
-                  </button>
+                <div className="p-[2px] rounded-full bg-gradient-to-r from-blue-600 to-emerald-500 shadow-lg">
+                  <div className="flex items-center bg-white rounded-full px-5 py-3.5 backdrop-blur supports-[backdrop-filter]:bg-white/90">
+                    <FiSearch className="w-6 h-6 text-gray-400 mr-3 flex-shrink-0" />
+                    <input
+                      type="text"
+                      placeholder="Search by roles, skills, or companies"
+                      className="flex-1 text-gray-900 placeholder-gray-500 outline-none text-[15px]"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onFocus={() => setShowMobileSearchModal(true)}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Courses Section */}
-          <div className="px-4 py-4 bg-white">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-gray-900">Featured Courses</h2>
-              <button className="text-sm text-green-600 font-medium">View All</button>
-            </div>
-            <div className="flex space-x-4 overflow-x-auto pb-2">
-              {featuredCourses.map((course) => (
-                <div key={course.id} className="flex-shrink-0 w-64 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                  <img src={course.image} alt={course.title} className="w-full h-32 object-cover" />
-                  <div className="p-3">
-                    <h3 className="font-semibold text-gray-900 text-sm mb-1">{course.title}</h3>
-                    <p className="text-xs text-gray-600 mb-2">{course.provider}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <FiStar className="w-3 h-3 text-yellow-400 mr-1" />
-                        <span className="text-xs text-gray-600">{course.rating}</span>
-                        <span className="text-xs text-gray-500 ml-1">({course.students})</span>
+          {/* Featured Courses (just below search) */}
+          {featuredCoursesHome.length > 0 && (
+            <div className="px-4 pt-1.5 pb-1 bg-white border-b border-gray-100">
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="text-sm font-semibold text-gray-900">Featured Courses</h2>
+                <button onClick={() => navigate('/courses')} className="text-xs font-medium text-ocean-600">View all</button>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory">
+                {featuredCoursesHome.map((course: any) => (
+                  <div
+                    key={course.id}
+                    onClick={() => navigate(`/courses/${course.id}`)}
+                    className="snap-start relative flex-shrink-0 w-[260px] h-[115px] rounded-2xl overflow-hidden shadow border border-gray-200 bg-gray-100 cursor-pointer active:scale-[0.99]"
+                    style={{ backgroundImage: `url(${course.cover_photo_url || '/default-course-cover.png'})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-2.5">
+                      <div className="text-white text-xs font-semibold truncate">{course.title}</div>
+                      <div className="flex items-center justify-between text-[11px] text-white/90">
+                        <span className="truncate mr-2">{course.instructor_name}</span>
+                        <span className="font-semibold">{
+                          (course?.is_free || Number(course?.price) <= 0)
+                            ? 'Free'
+                            : `₹${Number(course.price).toLocaleString('en-IN')}`
+                        }</span>
                       </div>
-                      <span className="text-sm font-semibold text-green-600">{course.price}</span>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Category Tabs */}
           <div className="bg-white border-b border-gray-100">
-            <div className="flex justify-center px-4 py-3">
+            <div className="flex justify-center px-4 py-1.5">
               <div className="flex bg-gray-100 rounded-2xl p-1 w-full max-w-sm">
                 {[
                   { key: 'foryou', label: 'For You', icon: FiStar },
-                  { key: 'jobs', label: 'Jobs', icon: FiBriefcase },
-                  { key: 'internships', label: 'Internships', icon: FiBookOpen }
+                  { key: 'jobs', label: 'Jobs', icon: MdWorkOutline },
+                  { key: 'internships', label: 'Internships', icon: FaUserGraduate }
                 ].map(tab => (
                   <button
                     key={tab.key}
-                    className={`flex-1 py-2 px-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-1 ${
-                      activeMobileTab === tab.key 
-                        ? 'bg-white text-green-600 shadow-sm' 
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
+                    className={`flex-1 py-1.5 px-2.5 rounded-xl font-semibold text-xs transition-all duration-200 flex flex-col items-center justify-center gap-1 border ${
+                      activeMobileTab === tab.key
+                        ? (tab.key === 'foryou'
+                            ? 'text-ocean-600 border-ocean-300 border-2'
+                            : tab.key === 'jobs'
+                              ? 'text-emerald-600 border-emerald-300 border-2'
+                              : 'text-orange-600 border-orange-300 border-2')
+                        : 'text-gray-700 border border-transparent'
+                    } bg-white`}
                     onClick={() => setActiveMobileTab(tab.key as any)}
                   >
-                    <tab.icon className="w-4 h-4" />
-                    {tab.label}
+                    <tab.icon
+                      className={`w-5 h-5 ${
+                        tab.key === 'foryou'
+                          ? 'text-ocean-600'
+                          : tab.key === 'jobs'
+                            ? 'text-emerald-600'
+                            : 'text-orange-500'
+                      }`}
+                    />
+                    <span className="mt-0.5 text-[13px]">{tab.label}</span>
                   </button>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Filter Bar */}
-          <div className="bg-white px-4 py-3 border-b border-gray-100">
-            <div className="flex items-center space-x-3 overflow-x-auto">
-              <button className="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded-full text-sm font-medium text-gray-700 whitespace-nowrap">
-                <FiFilter className="w-4 h-4" />
+          {/* Mobile Filter Bar (compact) */}
+          <div className="bg-white px-4 py-1.5 border-b border-gray-100">
+            <div className="flex items-center gap-2 overflow-x-auto">
+              <button
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 rounded-full text-xs font-medium text-gray-700 whitespace-nowrap relative"
+                onClick={() => setShowAdvancedSearch(true)}
+              >
+                <FiFilter className="w-3 h-3" />
                 Filters
+                {Object.values(filters).filter(Boolean).length > 0 && (
+                  <span className="ml-1 inline-flex items-center justify-center px-1.5 h-4 min-w-[16px] rounded-full bg-ocean-600 text-white text-[10px]">
+                    {Object.values(filters).filter(Boolean).length}
+                  </span>
+                )}
               </button>
-              <button className="px-3 py-2 bg-gray-100 rounded-full text-sm font-medium text-gray-700 whitespace-nowrap">
-                Posted in
-              </button>
-              <button className="px-3 py-2 bg-gray-100 rounded-full text-sm font-medium text-gray-700 whitespace-nowrap">
-                Distance
-              </button>
-              <button className="px-3 py-2 bg-gray-100 rounded-full text-sm font-medium text-gray-700 whitespace-nowrap">
-                Salary
-              </button>
+              {/* Selected filter chips */}
+              {Object.entries(filters).filter(([,v]) => !!v).map(([key,value]) => (
+                <span key={key} className="flex items-center gap-1 px-3 py-2 bg-ocean-50 text-ocean-700 rounded-full text-sm border border-ocean-200 whitespace-nowrap">
+                  {value}
+                  <button className="ml-1 text-ocean-700/80" onClick={() => setFilters({ ...filters, [key]: '' } as any)}>
+                    <FiX className="w-4 h-4" />
+                  </button>
+                </span>
+              ))}
             </div>
           </div>
 
+          
+
           {/* Job Listings */}
-          <div className="px-4 py-4">
+          <div className="px-4 pt-1 pb-4">
             {loading ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
@@ -655,77 +656,186 @@ const Home: React.FC = () => {
               </div>
             ) : filteredMobileData.length === 0 ? (
               <div className="text-center py-12">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FiSearch className="w-8 h-8 text-green-600" />
+                <div className="w-16 h-16 bg-ocean-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FiSearch className="w-8 h-8 text-ocean-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No results found</h3>
                 <p className="text-gray-500">Try adjusting your search criteria or filters</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredMobileData.map((item: CombinedOpportunity) => (
-                  <div key={item.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-                    <div className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                            <span className="text-lg font-semibold text-gray-600">
-                              {item.company?.[0] || 'C'}
-                            </span>
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900 text-base mb-1">{item.title}</h3>
-                            <p className="text-sm text-gray-600">{item.company}</p>
-                          </div>
-                        </div>
-                        <button className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                          <FiTrendingUp className="w-4 h-4 text-gray-600" />
-                        </button>
-                      </div>
-                      
-                      <div className="flex items-center text-sm text-gray-600 mb-3">
-                        <FiMapPin className="w-4 h-4 mr-1" />
-                        <span>{formatLocation(item.location)}</span>
-                      </div>
-                      
-                      <div className="flex items-center text-sm text-gray-600 mb-3">
-                        <span className="font-medium">₹{item.salary?.replace(/[^\d,-]/g, '') || 'Not specified'}</span>
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
-                          {item.type}
-                        </span>
-                        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
-                          {item.experience || 'Any Experience'}
-                        </span>
-                        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
-                          {item.postType}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center text-xs text-gray-500">
-                          <FiClock className="w-3 h-3 mr-1" />
-                          <span>Posted {new Date(item.postedDate).toLocaleDateString()}</span>
-                        </div>
-                        <button 
-                          className="px-4 py-2 bg-green-600 text-white rounded-full text-sm font-medium"
-                          onClick={() => navigate(`/${item.postType.toLowerCase()}s/${item.id}`)}
-                        >
-                          Apply Now
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                {filteredMobileData.map((item: CombinedOpportunity) => {
+                  const skills = Array.isArray(item.requirements)
+                    ? item.requirements.map(r =>
+                        typeof r === 'string'
+                          ? r
+                          : typeof r === 'object' && r !== null && 'name' in r
+                            ? (r as any).name
+                            : ''
+                      ).filter(Boolean)
+                    : typeof item.requirements === 'string'
+                      ? (item.requirements as string).split(',').map(s => s.trim()).filter(Boolean)
+                      : [];
+
+                  return item.postType === 'Job' ? (
+                    <JobCardNew key={item.id} job={{
+                      id: item.id,
+                      title: item.title,
+                      company: item.company,
+                      companies: { name: item.company, logo_url: item.companyLogo },
+                      location: item.location,
+                      type: item.type,
+                      salary: item.salary,
+                      description: item.description,
+                      postedDate: item.postedDate,
+                      requirements: skills,
+                      status: item.status as 'active' | 'paused' | 'closed' | 'expired',
+                      experience: item.experience,
+                      companyLogo: item.companyLogo,
+                      skills,
+                    }} />
+                  ) : (
+                    <InternshipCard key={item.id} internship={{
+                      id: item.id,
+                      title: item.title,
+                      company: item.company,
+                      companyLogo: item.companyLogo,
+                      internship_type: item.type,
+                      stipend_type: item.stipend_type ?? '',
+                      min_amount: typeof item.min_amount === 'number' ? item.min_amount : 0,
+                      max_amount: typeof item.max_amount === 'number' ? item.max_amount : 0,
+                      amount: typeof item.amount === 'number' ? item.amount : 0,
+                      pay_rate: item.pay_rate || '',
+                      duration: String(item.duration || ''),
+                      location: item.location,
+                      description: item.description,
+                      skills: Array.isArray(item.skills) ? item.skills : [],
+                    }} />
+                  );
+                })}
               </div>
             )}
           </div>
 
+          {/* Mobile Filters Bottom Sheet */}
+          {showAdvancedSearch && (
+            <div className="fixed inset-0 z-[60] flex items-end md:hidden" onKeyDown={(e) => { if (e.key === 'Escape') setShowAdvancedSearch(false); }}>
+              <div className="absolute inset-0 bg-black/50 animate-fade-in" onClick={() => setShowAdvancedSearch(false)} />
+              <div className="relative w-full h-[85vh] bg-white rounded-t-3xl shadow-2xl flex flex-col animate-slide-up">
+                {/* Sheet Header */}
+                <div className="sticky top-0 bg-white border-b border-gray-100 px-6 pt-3 pb-4 z-10">
+                  <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3" />
+                  <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-gray-900">Filters</h3>
+                  <button
+                    className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200"
+                    onClick={() => setShowAdvancedSearch(false)}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                  </div>
+                </div>
+                {/* Sheet Content */}
+                <div className="flex-1 overflow-y-auto px-6 py-4 pb-28 space-y-4">
+                  {/* Job Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Job Type</label>
+                    <select
+                      name="jobType"
+                      value={filters.jobType}
+                      onChange={(e) => handleFilterChange({ ...filters, jobType: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-gray-50 text-sm focus:ring-2 focus:ring-ocean-600 focus:border-ocean-600"
+                    >
+                      <option value="">Any</option>
+                      <option value="Full-time">Full-time</option>
+                      <option value="Part-time">Part-time</option>
+                      <option value="Contract">Contract</option>
+                      <option value="Internship">Internship</option>
+                    </select>
+                  </div>
+                  {/* Company */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
+                    <input
+                      value={filters.company}
+                      onChange={(e) => handleFilterChange({ ...filters, company: e.target.value })}
+                      placeholder="e.g., Selectz Technologies"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-gray-50 text-sm focus:ring-2 focus:ring-ocean-600 focus:border-ocean-600"
+                    />
+                  </div>
+                  {/* Experience */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Experience</label>
+                    <select
+                      name="experienceLevel"
+                      value={filters.experienceLevel}
+                      onChange={(e) => handleFilterChange({ ...filters, experienceLevel: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-gray-50 text-sm focus:ring-2 focus:ring-ocean-600 focus:border-ocean-600"
+                    >
+                      <option value="">All</option>
+                      <option value="fresher">Fresher</option>
+                      <option value="1-3">1-3 years</option>
+                      <option value="3-5">3-5 years</option>
+                      <option value="5-10">5-10 years</option>
+                      <option value="10+">10+ years</option>
+                    </select>
+                  </div>
+                  {/* Work Mode */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Work Mode</label>
+                    <select
+                      name="remoteWork"
+                      value={filters.remoteWork}
+                      onChange={(e) => handleFilterChange({ ...filters, remoteWork: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-gray-50 text-sm focus:ring-2 focus:ring-ocean-600 focus:border-ocean-600"
+                    >
+                      <option value="">Any</option>
+                      <option value="remote">Remote</option>
+                      <option value="hybrid">Hybrid</option>
+                      <option value="onsite">On-site</option>
+                    </select>
+                  </div>
+                  {/* Posted Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Posted Date</label>
+                    <select
+                      name="postedDate"
+                      value={filters.postedDate}
+                      onChange={(e) => handleFilterChange({ ...filters, postedDate: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-gray-50 text-sm focus:ring-2 focus:ring-ocean-600 focus:border-ocean-600"
+                    >
+                      <option value="">Any time</option>
+                      <option value="Last 24 hours">Last 24 hours</option>
+                      <option value="Last 3 days">Last 3 days</option>
+                      <option value="Last 7 days">Last 7 days</option>
+                      <option value="Last 30 days">Last 30 days</option>
+                    </select>
+                  </div>
+                </div>
+                {/* Sheet Footer */}
+                <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-3.5 flex items-center justify-between gap-3 z-[61]">
+                  <button
+                    className="px-3.5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold flex-1"
+                    onClick={() => { handleFilterReset(); setShowAdvancedSearch(false); }}
+                  >
+                    Clear All
+                  </button>
+                  <button
+                    className="px-3.5 py-2.5 rounded-xl bg-ocean-600 text-white font-semibold flex-1"
+                    onClick={() => { handleFilterApply(); setShowAdvancedSearch(false); }}
+                  >
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Search Modal */}
           {showMobileSearchModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-end">
               <div className="bg-white w-full h-[90vh] rounded-t-3xl flex flex-col">
                 {/* Modal Header */}
                 <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 z-20">
@@ -743,7 +853,7 @@ const Home: React.FC = () => {
                 </div>
                 
                 {/* Modal Content */}
-                <div className="px-6 py-4 space-y-6 overflow-y-auto flex-1">
+                <div className="px-6 py-4 pb-28 space-y-6 overflow-y-auto flex-1">
                   {/* Type Selector */}
                   <div className="flex bg-gray-100 rounded-2xl p-1">
                     {['jobs', 'internships'].map(type => (
@@ -751,7 +861,7 @@ const Home: React.FC = () => {
                         key={type}
                         className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200 ${
                           modalType === type 
-                            ? 'bg-white text-green-600 shadow-sm' 
+                            ? 'bg-white text-ocean-600 shadow-sm' 
                             : 'text-gray-600 hover:text-gray-900'
                         }`}
                         onClick={() => setModalType(type as 'jobs' | 'internships')}
@@ -765,11 +875,11 @@ const Home: React.FC = () => {
                   <div className="space-y-4">
                     <div className="relative">
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        <FiBriefcase className="inline w-4 h-4 mr-1" />
+                        <MdWorkOutline className="inline w-4 h-4 mr-1" />
                         Role or Skills
                       </label>
-                      <input
-                        className="w-full px-4 py-4 rounded-xl border-2 border-gray-200 bg-gray-50 text-base placeholder-gray-400 focus:ring-2 focus:ring-green-600 focus:border-green-600 transition-all"
+                       <input
+                         className="w-full px-4 py-4 rounded-xl border-2 border-gray-200 bg-gray-50 text-base placeholder-gray-400 focus:ring-2 focus:ring-ocean-600 focus:border-ocean-600 transition-all"
                         placeholder="e.g., Software Engineer, React, Marketing"
                         value={modalDesignation}
                         onChange={e => setModalDesignation(e.target.value)}
@@ -791,7 +901,7 @@ const Home: React.FC = () => {
                               }}
                             >
                               <div className="flex items-center">
-                                <FiBriefcase className="w-4 h-4 text-gray-400 mr-3" />
+                                <MdWorkOutline className="w-4 h-4 text-gray-400 mr-3" />
                                 <span className="truncate">{suggestion}</span>
                               </div>
                             </button>
@@ -805,8 +915,8 @@ const Home: React.FC = () => {
                         <FiMapPin className="inline w-4 h-4 mr-1" />
                         Location
                       </label>
-                      <input
-                        className="w-full px-4 py-4 rounded-xl border-2 border-gray-200 bg-gray-50 text-base placeholder-gray-400 focus:ring-2 focus:ring-green-600 focus:border-green-600 transition-all"
+                       <input
+                         className="w-full px-4 py-4 rounded-xl border-2 border-gray-200 bg-gray-50 text-base placeholder-gray-400 focus:ring-2 focus:ring-ocean-600 focus:border-ocean-600 transition-all"
                         placeholder="e.g., Mumbai, Remote, Hybrid"
                         value={modalLocation}
                         onChange={e => setModalLocation(e.target.value)}
@@ -852,16 +962,25 @@ const Home: React.FC = () => {
                                 setModalType(search.type as 'jobs' | 'internships');
                               }}
                             >
-                              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                <FiSearch className="w-4 h-4 text-green-600" />
+                              <div className="w-8 h-8 bg-ocean-100 rounded-full flex items-center justify-center">
+                                <FiSearch className="w-4 h-4 text-ocean-600" />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-gray-900 truncate">{search.designation || 'Any role'}</div>
                                 {search.location && <div className="text-sm text-gray-500">in {search.location}</div>}
                               </div>
-                              <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-600 font-medium">
+                              <span className="text-xs px-2 py-1 rounded-full bg-ocean-100 text-ocean-700 font-medium">
                                 {search.type.charAt(0).toUpperCase() + search.type.slice(1)}
                               </span>
+                            </button>
+                            <button
+                              className="ml-3 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200"
+                              aria-label="Remove recent search"
+                              onClick={() => removeRecentSearch(i)}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
                             </button>
                           </div>
                         ))}
@@ -871,9 +990,9 @@ const Home: React.FC = () => {
                 </div>
                 
                 {/* Search Button */}
-                <div className="px-6 pb-6 bg-white sticky bottom-0 z-30">
+                <div className="px-6 pb-5 bg-white sticky bottom-0 z-30">
                   <button
-                    className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-4 font-bold text-base flex items-center justify-center gap-2 shadow-lg transition-all duration-300"
+                    className="w-full bg-ocean-600 hover:bg-ocean-700 text-white rounded-xl py-3.5 font-semibold text-base flex items-center justify-center gap-2 shadow-lg transition-all duration-300"
                     onClick={() => {
                       setActiveMobileTab(modalType);
                       setSearchTerm(modalDesignation);
